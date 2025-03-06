@@ -1,64 +1,96 @@
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { useEvent } from "react-use"
+
 import { ExtensionMessage } from "../../src/shared/ExtensionMessage"
+import { ShowHumanRelayDialogMessage } from "../../src/shared/ExtensionMessage"
+
+import { vscode } from "./utils/vscode"
+import { ExtensionStateContextProvider, useExtensionState } from "./context/ExtensionStateContext"
 import ChatView from "./components/chat/ChatView"
 import HistoryView from "./components/history/HistoryView"
-import SettingsView from "./components/settings/SettingsView"
+import SettingsView, { SettingsViewRef } from "./components/settings/SettingsView"
 import WelcomeView from "./components/welcome/WelcomeView"
-import { ExtensionStateContextProvider, useExtensionState } from "./context/ExtensionStateContext"
-import { vscode } from "./utils/vscode"
 import McpView from "./components/mcp/McpView"
 import PromptsView from "./components/prompts/PromptsView"
+import { HumanRelayDialog } from "./components/human-relay/HumanRelayDialog"
 
-const AppContent = () => {
+type Tab = "settings" | "history" | "mcp" | "prompts" | "chat"
+
+const tabsByMessageAction: Partial<Record<NonNullable<ExtensionMessage["action"]>, Tab>> = {
+	chatButtonClicked: "chat",
+	settingsButtonClicked: "settings",
+	promptsButtonClicked: "prompts",
+	mcpButtonClicked: "mcp",
+	historyButtonClicked: "history",
+}
+
+const App = () => {
 	const { didHydrateState, showWelcome, shouldShowAnnouncement } = useExtensionState()
-	const [showSettings, setShowSettings] = useState(false)
-	const [showHistory, setShowHistory] = useState(false)
-	const [showMcp, setShowMcp] = useState(false)
-	const [showPrompts, setShowPrompts] = useState(false)
 	const [showAnnouncement, setShowAnnouncement] = useState(false)
+	const [tab, setTab] = useState<Tab>("chat")
+	const settingsRef = useRef<SettingsViewRef>(null)
 
-	const handleMessage = useCallback((e: MessageEvent) => {
-		const message: ExtensionMessage = e.data
-		switch (message.type) {
-			case "action":
-				switch (message.action!) {
-					case "settingsButtonClicked":
-						setShowSettings(true)
-						setShowHistory(false)
-						setShowMcp(false)
-						setShowPrompts(false)
-						break
-					case "historyButtonClicked":
-						setShowSettings(false)
-						setShowHistory(true)
-						setShowMcp(false)
-						setShowPrompts(false)
-						break
-					case "mcpButtonClicked":
-						setShowSettings(false)
-						setShowHistory(false)
-						setShowMcp(true)
-						setShowPrompts(false)
-						break
-					case "promptsButtonClicked":
-						setShowSettings(false)
-						setShowHistory(false)
-						setShowMcp(false)
-						setShowPrompts(true)
-						break
-					case "chatButtonClicked":
-						setShowSettings(false)
-						setShowHistory(false)
-						setShowMcp(false)
-						setShowPrompts(false)
-						break
-				}
-				break
+	// Human Relay Dialog Status
+	const [humanRelayDialogState, setHumanRelayDialogState] = useState<{
+		isOpen: boolean
+		requestId: string
+		promptText: string
+	}>({
+		isOpen: false,
+		requestId: "",
+		promptText: "",
+	})
+
+	const switchTab = useCallback((newTab: Tab) => {
+		if (settingsRef.current?.checkUnsaveChanges) {
+			settingsRef.current.checkUnsaveChanges(() => setTab(newTab))
+		} else {
+			setTab(newTab)
 		}
 	}, [])
 
-	useEvent("message", handleMessage)
+	const onMessage = useCallback(
+		(e: MessageEvent) => {
+			const message: ExtensionMessage = e.data
+
+			if (message.type === "action" && message.action) {
+				const newTab = tabsByMessageAction[message.action]
+
+				if (newTab) {
+					switchTab(newTab)
+				}
+			}
+			const mes: ShowHumanRelayDialogMessage = message as ShowHumanRelayDialogMessage
+			// Processing displays human relay dialog messages
+			if (mes.type === "showHumanRelayDialog" && mes.requestId && mes.promptText) {
+				setHumanRelayDialogState({
+					isOpen: true,
+					requestId: mes.requestId,
+					promptText: mes.promptText,
+				})
+			}
+		},
+		[switchTab],
+	)
+
+	// Processing Human Relay Dialog Submission
+	const handleHumanRelaySubmit = (requestId: string, text: string) => {
+		vscode.postMessage({
+			type: "humanRelayResponse",
+			requestId,
+			text,
+		})
+	}
+
+	// Handle Human Relay dialog box cancel
+	const handleHumanRelayCancel = (requestId: string) => {
+		vscode.postMessage({
+			type: "humanRelayCancel",
+			requestId,
+		})
+	}
+
+	useEvent("message", onMessage)
 
 	useEffect(() => {
 		if (shouldShowAnnouncement) {
@@ -67,46 +99,48 @@ const AppContent = () => {
 		}
 	}, [shouldShowAnnouncement])
 
+	// Tell Extension that we are ready to receive messages
+	useEffect(() => {
+		vscode.postMessage({ type: "webviewDidLaunch" })
+	}, [])
+
 	if (!didHydrateState) {
 		return null
 	}
 
-	return (
+	// Do not conditionally load ChatView, it's expensive and there's state we
+	// don't want to lose (user input, disableInput, askResponse promise, etc.)
+	return showWelcome ? (
+		<WelcomeView />
+	) : (
 		<>
-			{showWelcome ? (
-				<WelcomeView />
-			) : (
-				<>
-					{showSettings && <SettingsView onDone={() => setShowSettings(false)} />}
-					{showHistory && <HistoryView onDone={() => setShowHistory(false)} />}
-					{showMcp && <McpView onDone={() => setShowMcp(false)} />}
-					{showPrompts && <PromptsView onDone={() => setShowPrompts(false)} />}
-					{/* Do not conditionally load ChatView, it's expensive and there's state we don't want to lose (user input, disableInput, askResponse promise, etc.) */}
-					<ChatView
-						showHistoryView={() => {
-							setShowSettings(false)
-							setShowMcp(false)
-							setShowPrompts(false)
-							setShowHistory(true)
-						}}
-						isHidden={showSettings || showHistory || showMcp || showPrompts}
-						showAnnouncement={showAnnouncement}
-						hideAnnouncement={() => {
-							setShowAnnouncement(false)
-						}}
-					/>
-				</>
-			)}
+			{tab === "settings" && <SettingsView ref={settingsRef} onDone={() => setTab("chat")} />}
+			{tab === "history" && <HistoryView onDone={() => switchTab("chat")} />}
+			{tab === "mcp" && <McpView onDone={() => switchTab("chat")} />}
+			{tab === "prompts" && <PromptsView onDone={() => switchTab("chat")} />}
+			<ChatView
+				isHidden={tab !== "chat"}
+				showAnnouncement={showAnnouncement}
+				hideAnnouncement={() => setShowAnnouncement(false)}
+				showHistoryView={() => switchTab("history")}
+			/>
+			{/* Human Relay Dialog */}
+			<HumanRelayDialog
+				isOpen={humanRelayDialogState.isOpen}
+				requestId={humanRelayDialogState.requestId}
+				promptText={humanRelayDialogState.promptText}
+				onClose={() => setHumanRelayDialogState((prev) => ({ ...prev, isOpen: false }))}
+				onSubmit={handleHumanRelaySubmit}
+				onCancel={handleHumanRelayCancel}
+			/>
 		</>
 	)
 }
 
-const App = () => {
-	return (
-		<ExtensionStateContextProvider>
-			<AppContent />
-		</ExtensionStateContextProvider>
-	)
-}
+const AppWithProviders = () => (
+	<ExtensionStateContextProvider>
+		<App />
+	</ExtensionStateContextProvider>
+)
 
-export default App
+export default AppWithProviders

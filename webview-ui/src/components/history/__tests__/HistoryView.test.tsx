@@ -1,13 +1,13 @@
-import React from "react"
-import { render, screen, fireEvent, within, waitFor } from "@testing-library/react"
-import userEvent from "@testing-library/user-event"
+// cd webview-ui && npx jest src/components/history/__tests__/HistoryView.test.ts
+
+import { render, screen, fireEvent, within, act } from "@testing-library/react"
 import HistoryView from "../HistoryView"
 import { useExtensionState } from "../../../context/ExtensionStateContext"
 import { vscode } from "../../../utils/vscode"
 
-// Mock dependencies
 jest.mock("../../../context/ExtensionStateContext")
 jest.mock("../../../utils/vscode")
+
 jest.mock("react-virtuoso", () => ({
 	Virtuoso: ({ data, itemContent }: any) => (
 		<div data-testid="virtuoso-container">
@@ -23,6 +23,7 @@ jest.mock("react-virtuoso", () => ({
 const mockTaskHistory = [
 	{
 		id: "1",
+		number: 0,
 		task: "Test task 1",
 		ts: new Date("2022-02-16T00:00:00").getTime(),
 		tokensIn: 100,
@@ -31,6 +32,7 @@ const mockTaskHistory = [
 	},
 	{
 		id: "2",
+		number: 0,
 		task: "Test task 2",
 		ts: new Date("2022-02-17T00:00:00").getTime(),
 		tokensIn: 200,
@@ -41,19 +43,19 @@ const mockTaskHistory = [
 ]
 
 describe("HistoryView", () => {
-	beforeEach(() => {
-		// Reset all mocks before each test
-		jest.clearAllMocks()
+	beforeAll(() => {
 		jest.useFakeTimers()
+	})
 
-		// Mock useExtensionState implementation
+	afterAll(() => {
+		jest.useRealTimers()
+	})
+
+	beforeEach(() => {
+		jest.clearAllMocks()
 		;(useExtensionState as jest.Mock).mockReturnValue({
 			taskHistory: mockTaskHistory,
 		})
-	})
-
-	afterEach(() => {
-		jest.useRealTimers()
 	})
 
 	it("renders history items correctly", () => {
@@ -67,7 +69,7 @@ describe("HistoryView", () => {
 		expect(screen.getByText("Test task 2")).toBeInTheDocument()
 	})
 
-	it("handles search functionality", async () => {
+	it("handles search functionality", () => {
 		const onDone = jest.fn()
 		render(<HistoryView onDone={onDone} />)
 
@@ -76,17 +78,23 @@ describe("HistoryView", () => {
 		const radioGroup = screen.getByRole("radiogroup")
 
 		// Type in search
-		await userEvent.type(searchInput, "task 1")
+		fireEvent.input(searchInput, { target: { value: "task 1" } })
+
+		// Advance timers to process search state update
+		jest.advanceTimersByTime(100)
 
 		// Check if sort option automatically changes to "Most Relevant"
 		const mostRelevantRadio = within(radioGroup).getByLabelText("Most Relevant")
 		expect(mostRelevantRadio).not.toBeDisabled()
 
-		// Click and wait for radio update
+		// Click the radio button
 		fireEvent.click(mostRelevantRadio)
 
-		// Wait for radio button to be checked
-		const updatedRadio = await within(radioGroup).findByRole("radio", { name: "Most Relevant", checked: true })
+		// Advance timers to process radio button state update
+		jest.advanceTimersByTime(100)
+
+		// Verify radio button is checked
+		const updatedRadio = within(radioGroup).getByRole("radio", { name: "Most Relevant", checked: true })
 		expect(updatedRadio).toBeInTheDocument()
 	})
 
@@ -129,25 +137,59 @@ describe("HistoryView", () => {
 		})
 	})
 
-	it("handles task deletion", () => {
-		const onDone = jest.fn()
-		render(<HistoryView onDone={onDone} />)
+	describe("task deletion", () => {
+		it("shows confirmation dialog on regular click", () => {
+			const onDone = jest.fn()
+			render(<HistoryView onDone={onDone} />)
 
-		// Find and hover over first task
-		const taskContainer = screen.getByTestId("virtuoso-item-1")
-		fireEvent.mouseEnter(taskContainer)
+			// Find and hover over first task
+			const taskContainer = screen.getByTestId("virtuoso-item-1")
+			fireEvent.mouseEnter(taskContainer)
 
-		const deleteButton = within(taskContainer).getByTitle("Delete Task")
-		fireEvent.click(deleteButton)
+			// Click delete button to open confirmation dialog
+			const deleteButton = within(taskContainer).getByTitle("Delete Task (Shift + Click to skip confirmation)")
+			fireEvent.click(deleteButton)
 
-		// Verify vscode message was sent
-		expect(vscode.postMessage).toHaveBeenCalledWith({
-			type: "deleteTaskWithId",
-			text: "1",
+			// Verify dialog is shown
+			const dialog = screen.getByRole("alertdialog")
+			expect(dialog).toBeInTheDocument()
+
+			// Find and click the confirm delete button in the dialog
+			const confirmDeleteButton = within(dialog).getByRole("button", { name: /delete/i })
+			fireEvent.click(confirmDeleteButton)
+
+			// Verify vscode message was sent
+			expect(vscode.postMessage).toHaveBeenCalledWith({
+				type: "deleteTaskWithId",
+				text: "1",
+			})
+		})
+
+		it("deletes immediately on shift-click without confirmation", () => {
+			const onDone = jest.fn()
+			render(<HistoryView onDone={onDone} />)
+
+			// Find and hover over first task
+			const taskContainer = screen.getByTestId("virtuoso-item-1")
+			fireEvent.mouseEnter(taskContainer)
+
+			// Shift-click delete button
+			const deleteButton = within(taskContainer).getByTitle("Delete Task (Shift + Click to skip confirmation)")
+			fireEvent.click(deleteButton, { shiftKey: true })
+
+			// Verify no dialog is shown
+			expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument()
+
+			// Verify vscode message was sent
+			expect(vscode.postMessage).toHaveBeenCalledWith({
+				type: "deleteTaskWithId",
+				text: "1",
+			})
 		})
 	})
 
 	it("handles task copying", async () => {
+		// Setup clipboard mock that resolves immediately
 		const mockClipboard = {
 			writeText: jest.fn().mockResolvedValue(undefined),
 		}
@@ -161,20 +203,26 @@ describe("HistoryView", () => {
 		fireEvent.mouseEnter(taskContainer)
 
 		const copyButton = within(taskContainer).getByTitle("Copy Prompt")
-		await userEvent.click(copyButton)
 
-		// Verify clipboard API was called
+		// Click the copy button and wait for clipboard operation
+		await act(async () => {
+			fireEvent.click(copyButton)
+			// Let the clipboard Promise resolve
+			await Promise.resolve()
+			// Let React process the first state update
+			await Promise.resolve()
+		})
+
+		// Verify clipboard was called
 		expect(navigator.clipboard.writeText).toHaveBeenCalledWith("Test task 1")
 
-		// Wait for copy modal to appear
-		const copyModal = await screen.findByText("Prompt Copied to Clipboard")
-		expect(copyModal).toBeInTheDocument()
-
-		// Fast-forward timers and wait for modal to disappear
-		jest.advanceTimersByTime(2000)
-		await waitFor(() => {
-			expect(screen.queryByText("Prompt Copied to Clipboard")).not.toBeInTheDocument()
+		// Advance timer to trigger the setTimeout for modal disappearance
+		act(() => {
+			jest.advanceTimersByTime(2000)
 		})
+
+		// Verify modal is gone
+		expect(screen.queryByText("Prompt Copied to Clipboard")).not.toBeInTheDocument()
 	})
 
 	it("formats dates correctly", () => {
@@ -223,7 +271,7 @@ describe("HistoryView", () => {
 		const taskContainer = screen.getByTestId("virtuoso-item-2")
 		fireEvent.mouseEnter(taskContainer)
 
-		const exportButton = within(taskContainer).getByText("EXPORT")
+		const exportButton = within(taskContainer).getByTestId("export")
 		fireEvent.click(exportButton)
 
 		// Verify vscode message was sent

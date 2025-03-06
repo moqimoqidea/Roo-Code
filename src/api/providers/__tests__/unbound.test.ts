@@ -73,6 +73,15 @@ describe("UnboundHandler", () => {
 		mockOptions = {
 			apiModelId: "anthropic/claude-3-5-sonnet-20241022",
 			unboundApiKey: "test-api-key",
+			unboundModelId: "anthropic/claude-3-5-sonnet-20241022",
+			unboundModelInfo: {
+				description: "Anthropic's Claude 3 Sonnet model",
+				maxTokens: 8192,
+				contextWindow: 200000,
+				supportsPromptCache: true,
+				inputPrice: 0.01,
+				outputPrice: 0.02,
+			},
 		}
 		handler = new UnboundHandler(mockOptions)
 		mockCreate.mockClear()
@@ -183,6 +192,11 @@ describe("UnboundHandler", () => {
 					temperature: 0,
 					max_tokens: 8192,
 				}),
+				expect.objectContaining({
+					headers: expect.objectContaining({
+						"X-Unbound-Metadata": expect.stringContaining("roo-code"),
+					}),
+				}),
 			)
 		})
 
@@ -205,6 +219,15 @@ describe("UnboundHandler", () => {
 			const nonAnthropicOptions = {
 				apiModelId: "openai/gpt-4o",
 				unboundApiKey: "test-key",
+				unboundModelId: "openai/gpt-4o",
+				unboundModelInfo: {
+					description: "OpenAI's GPT-4",
+					maxTokens: undefined,
+					contextWindow: 128000,
+					supportsPromptCache: true,
+					inputPrice: 0.01,
+					outputPrice: 0.03,
+				},
 			}
 			const nonAnthropicHandler = new UnboundHandler(nonAnthropicOptions)
 
@@ -214,6 +237,11 @@ describe("UnboundHandler", () => {
 					model: "gpt-4o",
 					messages: [{ role: "user", content: "Test prompt" }],
 					temperature: 0,
+				}),
+				expect.objectContaining({
+					headers: expect.objectContaining({
+						"X-Unbound-Metadata": expect.stringContaining("roo-code"),
+					}),
 				}),
 			)
 			expect(mockCreate.mock.calls[0][0]).not.toHaveProperty("max_tokens")
@@ -230,10 +258,11 @@ describe("UnboundHandler", () => {
 		it("should return default model when invalid model provided", () => {
 			const handlerWithInvalidModel = new UnboundHandler({
 				...mockOptions,
-				apiModelId: "invalid/model",
+				unboundModelId: "invalid/model",
+				unboundModelInfo: undefined,
 			})
 			const modelInfo = handlerWithInvalidModel.getModel()
-			expect(modelInfo.id).toBe("openai/gpt-4o") // Default model
+			expect(modelInfo.id).toBe("anthropic/claude-3-5-sonnet-20241022") // Default model
 			expect(modelInfo.info).toBeDefined()
 		})
 	})

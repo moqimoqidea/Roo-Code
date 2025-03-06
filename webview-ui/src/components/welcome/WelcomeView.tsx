@@ -1,27 +1,29 @@
 import { VSCodeButton } from "@vscode/webview-ui-toolkit/react"
-import { useEffect, useState } from "react"
+import { useCallback, useState } from "react"
 import { useExtensionState } from "../../context/ExtensionStateContext"
 import { validateApiConfiguration } from "../../utils/validate"
 import { vscode } from "../../utils/vscode"
 import ApiOptions from "../settings/ApiOptions"
 
 const WelcomeView = () => {
-	const { apiConfiguration } = useExtensionState()
+	const { apiConfiguration, currentApiConfigName, setApiConfiguration, uriScheme } = useExtensionState()
 
-	const [apiErrorMessage, setApiErrorMessage] = useState<string | undefined>(undefined)
+	const [errorMessage, setErrorMessage] = useState<string | undefined>(undefined)
 
-	const disableLetsGoButton = apiErrorMessage != null
+	const handleSubmit = useCallback(() => {
+		const error = validateApiConfiguration(apiConfiguration)
 
-	const handleSubmit = () => {
-		vscode.postMessage({ type: "apiConfiguration", apiConfiguration })
-	}
+		if (error) {
+			setErrorMessage(error)
+			return
+		}
 
-	useEffect(() => {
-		setApiErrorMessage(validateApiConfiguration(apiConfiguration))
-	}, [apiConfiguration])
+		setErrorMessage(undefined)
+		vscode.postMessage({ type: "upsertApiConfiguration", text: currentApiConfigName, apiConfiguration })
+	}, [apiConfiguration, currentApiConfigName])
 
 	return (
-		<div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, padding: "0 20px" }}>
+		<div className="flex flex-col min-h-screen px-0 pb-5">
 			<h2>Hi, I'm Roo!</h2>
 			<p>
 				I can do all kinds of tasks thanks to the latest breakthroughs in agentic coding capabilities and access
@@ -32,11 +34,22 @@ const WelcomeView = () => {
 
 			<b>To get started, this extension needs an API provider.</b>
 
-			<div style={{ marginTop: "10px" }}>
-				<ApiOptions />
-				<VSCodeButton onClick={handleSubmit} disabled={disableLetsGoButton} style={{ marginTop: "3px" }}>
-					Let's go!
-				</VSCodeButton>
+			<div className="mt-3">
+				<ApiOptions
+					fromWelcomeView
+					apiConfiguration={apiConfiguration || {}}
+					uriScheme={uriScheme}
+					setApiConfigurationField={(field, value) => setApiConfiguration({ [field]: value })}
+					errorMessage={errorMessage}
+					setErrorMessage={setErrorMessage}
+				/>
+			</div>
+
+			<div className="sticky bottom-0 bg-[var(--vscode-sideBar-background)] py-3">
+				<div className="flex flex-col gap-1.5">
+					<VSCodeButton onClick={handleSubmit}>Let's go!</VSCodeButton>
+					{errorMessage && <span className="text-destructive">{errorMessage}</span>}
+				</div>
 			</div>
 		</div>
 	)

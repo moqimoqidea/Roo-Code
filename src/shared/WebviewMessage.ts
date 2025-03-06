@@ -1,5 +1,8 @@
+import { z } from "zod"
 import { ApiConfiguration, ApiProvider } from "./api"
 import { Mode, PromptComponent, ModeConfig } from "./modes"
+
+export type ClineAskResponse = "yesButtonClicked" | "noButtonClicked" | "messageResponse"
 
 export type PromptMode = Mode | "enhance"
 
@@ -9,6 +12,7 @@ export interface WebviewMessage {
 	type:
 		| "apiConfiguration"
 		| "currentApiConfigName"
+		| "saveApiConfiguration"
 		| "upsertApiConfiguration"
 		| "deleteApiConfiguration"
 		| "loadApiConfiguration"
@@ -36,8 +40,10 @@ export interface WebviewMessage {
 		| "openFile"
 		| "openMention"
 		| "cancelTask"
-		| "refreshGlamaModels"
 		| "refreshOpenRouterModels"
+		| "refreshGlamaModels"
+		| "refreshUnboundModels"
+		| "refreshRequestyModels"
 		| "refreshOpenAiModels"
 		| "alwaysAllowBrowser"
 		| "alwaysAllowMcp"
@@ -46,6 +52,8 @@ export interface WebviewMessage {
 		| "soundEnabled"
 		| "soundVolume"
 		| "diffEnabled"
+		| "enableCheckpoints"
+		| "checkpointStorage"
 		| "browserViewportSize"
 		| "screenshotQuality"
 		| "openMcpSettings"
@@ -60,10 +68,10 @@ export interface WebviewMessage {
 		| "enhancedPrompt"
 		| "draggedImages"
 		| "deleteMessage"
-		| "terminalOutputLineLimit"
+		| "terminalOutputLimit"
 		| "mcpEnabled"
+		| "enableMcpServerCreation"
 		| "searchCommits"
-		| "refreshGlamaModels"
 		| "alwaysApproveResubmit"
 		| "requestDelaySeconds"
 		| "rateLimitSeconds"
@@ -74,6 +82,7 @@ export interface WebviewMessage {
 		| "updateSupportPrompt"
 		| "resetSupportPrompt"
 		| "getSystemPrompt"
+		| "copySystemPrompt"
 		| "systemPrompt"
 		| "enhancementApiConfigId"
 		| "updateExperimental"
@@ -82,6 +91,13 @@ export interface WebviewMessage {
 		| "deleteCustomMode"
 		| "setopenAiCustomModelInfo"
 		| "openCustomModesSettings"
+		| "checkpointDiff"
+		| "checkpointRestore"
+		| "deleteMcpServer"
+		| "maxOpenTabsContext"
+		| "humanRelayResponse"
+		| "humanRelayCancel"
+		| "browserToolEnabled"
 	text?: string
 	disabled?: boolean
 	askResponse?: ClineAskResponse
@@ -103,6 +119,38 @@ export interface WebviewMessage {
 	slug?: string
 	modeConfig?: ModeConfig
 	timeout?: number
+	payload?: WebViewMessagePayload
+	source?: "global" | "project"
+	requestId?: string
 }
 
-export type ClineAskResponse = "yesButtonClicked" | "noButtonClicked" | "messageResponse"
+// Human relay related message types
+export interface HumanRelayResponseMessage extends WebviewMessage {
+	type: "humanRelayResponse"
+	requestId: string
+	text: string
+}
+
+export interface HumanRelayCancelMessage extends WebviewMessage {
+	type: "humanRelayCancel"
+	requestId: string
+}
+
+export const checkoutDiffPayloadSchema = z.object({
+	ts: z.number(),
+	previousCommitHash: z.string().optional(),
+	commitHash: z.string(),
+	mode: z.enum(["full", "checkpoint"]),
+})
+
+export type CheckpointDiffPayload = z.infer<typeof checkoutDiffPayloadSchema>
+
+export const checkoutRestorePayloadSchema = z.object({
+	ts: z.number(),
+	commitHash: z.string(),
+	mode: z.enum(["preview", "restore"]),
+})
+
+export type CheckpointRestorePayload = z.infer<typeof checkoutRestorePayloadSchema>
+
+export type WebViewMessagePayload = CheckpointDiffPayload | CheckpointRestorePayload

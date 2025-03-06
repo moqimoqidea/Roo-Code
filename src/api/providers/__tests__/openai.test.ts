@@ -1,7 +1,5 @@
 import { OpenAiHandler } from "../openai"
 import { ApiHandlerOptions } from "../../../shared/api"
-import { ApiStream } from "../../transform/stream"
-import OpenAI from "openai"
 import { Anthropic } from "@anthropic-ai/sdk"
 
 // Mock OpenAI client
@@ -91,6 +89,20 @@ describe("OpenAiHandler", () => {
 				openAiBaseUrl: customBaseUrl,
 			})
 			expect(handlerWithCustomUrl).toBeInstanceOf(OpenAiHandler)
+		})
+
+		it("should set default headers correctly", () => {
+			// Get the mock constructor from the jest mock system
+			const openAiMock = jest.requireMock("openai").default
+
+			expect(openAiMock).toHaveBeenCalledWith({
+				baseURL: expect.any(String),
+				apiKey: expect.any(String),
+				defaultHeaders: {
+					"HTTP-Referer": "https://github.com/RooVetGit/Roo-Cline",
+					"X-Title": "Roo Code",
+				},
+			})
 		})
 	})
 

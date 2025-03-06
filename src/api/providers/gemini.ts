@@ -1,23 +1,24 @@
 import { Anthropic } from "@anthropic-ai/sdk"
 import { GoogleGenerativeAI } from "@google/generative-ai"
-import { ApiHandler, SingleCompletionHandler } from "../"
+import { SingleCompletionHandler } from "../"
 import { ApiHandlerOptions, geminiDefaultModelId, GeminiModelId, geminiModels, ModelInfo } from "../../shared/api"
 import { convertAnthropicMessageToGemini } from "../transform/gemini-format"
 import { ApiStream } from "../transform/stream"
+import { BaseProvider } from "./base-provider"
 
-export class GeminiHandler implements ApiHandler, SingleCompletionHandler {
-	private options: ApiHandlerOptions
+const GEMINI_DEFAULT_TEMPERATURE = 0
+
+export class GeminiHandler extends BaseProvider implements SingleCompletionHandler {
+	protected options: ApiHandlerOptions
 	private client: GoogleGenerativeAI
 
 	constructor(options: ApiHandlerOptions) {
-		if (!options.geminiApiKey) {
-			throw new Error("API key is required for Google Gemini")
-		}
+		super()
 		this.options = options
-		this.client = new GoogleGenerativeAI(options.geminiApiKey)
+		this.client = new GoogleGenerativeAI(options.geminiApiKey ?? "not-provided")
 	}
 
-	async *createMessage(systemPrompt: string, messages: Anthropic.Messages.MessageParam[]): ApiStream {
+	override async *createMessage(systemPrompt: string, messages: Anthropic.Messages.MessageParam[]): ApiStream {
 		const model = this.client.getGenerativeModel({
 			model: this.getModel().id,
 			systemInstruction: systemPrompt,
@@ -26,7 +27,7 @@ export class GeminiHandler implements ApiHandler, SingleCompletionHandler {
 			contents: messages.map(convertAnthropicMessageToGemini),
 			generationConfig: {
 				// maxOutputTokens: this.getModel().info.maxTokens,
-				temperature: 0,
+				temperature: this.options.modelTemperature ?? GEMINI_DEFAULT_TEMPERATURE,
 			},
 		})
 
@@ -45,7 +46,7 @@ export class GeminiHandler implements ApiHandler, SingleCompletionHandler {
 		}
 	}
 
-	getModel(): { id: GeminiModelId; info: ModelInfo } {
+	override getModel(): { id: GeminiModelId; info: ModelInfo } {
 		const modelId = this.options.apiModelId
 		if (modelId && modelId in geminiModels) {
 			const id = modelId as GeminiModelId
@@ -63,7 +64,7 @@ export class GeminiHandler implements ApiHandler, SingleCompletionHandler {
 			const result = await model.generateContent({
 				contents: [{ role: "user", parts: [{ text: prompt }] }],
 				generationConfig: {
-					temperature: 0,
+					temperature: this.options.modelTemperature ?? GEMINI_DEFAULT_TEMPERATURE,
 				},
 			})
 

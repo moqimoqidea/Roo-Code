@@ -15,7 +15,8 @@ import Thumbnails from "../common/Thumbnails"
 import { vscode } from "../../utils/vscode"
 import { WebviewMessage } from "../../../../src/shared/WebviewMessage"
 import { Mode, getAllModes } from "../../../../src/shared/modes"
-import { CaretIcon } from "../common/CaretIcon"
+import { convertToMentionPath } from "../../utils/path-mentions"
+import { SelectDropdown, DropdownOptionType } from "../ui"
 
 interface ChatTextAreaProps {
 	inputValue: string
@@ -30,6 +31,7 @@ interface ChatTextAreaProps {
 	onHeightChange?: (height: number) => void
 	mode: Mode
 	setMode: (value: Mode) => void
+	modeShortcutText: string
 }
 
 const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
@@ -47,10 +49,11 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			onHeightChange,
 			mode,
 			setMode,
+			modeShortcutText,
 		},
 		ref,
 	) => {
-		const { filePaths, currentApiConfigName, listApiConfigMeta, customModes } = useExtensionState()
+		const { filePaths, openedTabs, currentApiConfigName, listApiConfigMeta, customModes, cwd } = useExtensionState()
 		const [gitCommits, setGitCommits] = useState<any[]>([])
 		const [showDropdown, setShowDropdown] = useState(false)
 
@@ -137,15 +140,23 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 		const queryItems = useMemo(() => {
 			return [
 				{ type: ContextMenuOptionType.Problems, value: "problems" },
+				{ type: ContextMenuOptionType.Terminal, value: "terminal" },
 				...gitCommits,
+				...openedTabs
+					.filter((tab) => tab.path)
+					.map((tab) => ({
+						type: ContextMenuOptionType.OpenedFile,
+						value: "/" + tab.path,
+					})),
 				...filePaths
 					.map((file) => "/" + file)
+					.filter((path) => !openedTabs.some((tab) => tab.path && "/" + tab.path === path)) // Filter out paths that are already in openedTabs
 					.map((path) => ({
 						type: path.endsWith("/") ? ContextMenuOptionType.Folder : ContextMenuOptionType.File,
 						value: path,
 					})),
 			]
-		}, [filePaths, gitCommits])
+		}, [filePaths, gitCommits, openedTabs])
 
 		useEffect(() => {
 			const handleClickOutside = (event: MouseEvent) => {
@@ -172,6 +183,18 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 					return
 				}
 
+				if (type === ContextMenuOptionType.Mode && value) {
+					// Handle mode selection
+					setMode(value)
+					setInputValue("")
+					setShowContextMenu(false)
+					vscode.postMessage({
+						type: "mode",
+						text: value,
+					})
+					return
+				}
+
 				if (
 					type === ContextMenuOptionType.File ||
 					type === ContextMenuOptionType.Folder ||
@@ -195,6 +218,8 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 						insertValue = value || ""
 					} else if (type === ContextMenuOptionType.Problems) {
 						insertValue = "problems"
+					} else if (type === ContextMenuOptionType.Terminal) {
+						insertValue = "terminal"
 					} else if (type === ContextMenuOptionType.Git) {
 						insertValue = value || ""
 					}
@@ -219,6 +244,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 					}, 0)
 				}
 			},
+			// eslint-disable-next-line react-hooks/exhaustive-deps
 			[setInputValue, cursorPosition],
 		)
 
@@ -235,7 +261,12 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 						event.preventDefault()
 						setSelectedMenuIndex((prevIndex) => {
 							const direction = event.key === "ArrowUp" ? -1 : 1
-							const options = getContextMenuOptions(searchQuery, selectedType, queryItems)
+							const options = getContextMenuOptions(
+								searchQuery,
+								selectedType,
+								queryItems,
+								getAllModes(customModes),
+							)
 							const optionsLength = options.length
 
 							if (optionsLength === 0) return prevIndex
@@ -265,9 +296,12 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 					}
 					if ((event.key === "Enter" || event.key === "Tab") && selectedMenuIndex !== -1) {
 						event.preventDefault()
-						const selectedOption = getContextMenuOptions(searchQuery, selectedType, queryItems)[
-							selectedMenuIndex
-						]
+						const selectedOption = getContextMenuOptions(
+							searchQuery,
+							selectedType,
+							queryItems,
+							getAllModes(customModes),
+						)[selectedMenuIndex]
 						if (
 							selectedOption &&
 							selectedOption.type !== ContextMenuOptionType.URL &&
@@ -333,6 +367,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				setInputValue,
 				justDeletedSpaceAfterMention,
 				queryItems,
+				customModes,
 			],
 		)
 
@@ -353,13 +388,21 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 
 				setShowContextMenu(showMenu)
 				if (showMenu) {
-					const lastAtIndex = newValue.lastIndexOf("@", newCursorPosition - 1)
-					const query = newValue.slice(lastAtIndex + 1, newCursorPosition)
-					setSearchQuery(query)
-					if (query.length > 0) {
+					if (newValue.startsWith("/")) {
+						// Handle slash command
+						const query = newValue
+						setSearchQuery(query)
 						setSelectedMenuIndex(0)
 					} else {
-						setSelectedMenuIndex(3) // Set to "File" option by default
+						// Existing @ mention handling
+						const lastAtIndex = newValue.lastIndexOf("@", newCursorPosition - 1)
+						const query = newValue.slice(lastAtIndex + 1, newCursorPosition)
+						setSearchQuery(query)
+						if (query.length > 0) {
+							setSelectedMenuIndex(0)
+						} else {
+							setSelectedMenuIndex(3) // Set to "File" option by default
+						}
 					}
 				} else {
 					setSearchQuery("")
@@ -498,35 +541,6 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			[updateCursorPosition],
 		)
 
-		const selectStyle = {
-			fontSize: "11px",
-			cursor: textAreaDisabled ? "not-allowed" : "pointer",
-			backgroundColor: "transparent",
-			border: "none",
-			color: "var(--vscode-foreground)",
-			opacity: textAreaDisabled ? 0.5 : 0.8,
-			outline: "none",
-			paddingLeft: "20px",
-			paddingRight: "6px",
-			WebkitAppearance: "none" as const,
-			MozAppearance: "none" as const,
-			appearance: "none" as const,
-		}
-
-		const optionStyle = {
-			backgroundColor: "var(--vscode-dropdown-background)",
-			color: "var(--vscode-dropdown-foreground)",
-		}
-
-		const caretContainerStyle = {
-			position: "absolute" as const,
-			left: 6,
-			top: "50%",
-			transform: "translateY(-45%)",
-			pointerEvents: "none" as const,
-			opacity: textAreaDisabled ? 0.5 : 0.8,
-		}
-
 		return (
 			<div
 				className="chat-text-area"
@@ -549,18 +563,45 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 					const files = Array.from(e.dataTransfer.files)
 					const text = e.dataTransfer.getData("text")
 					if (text) {
-						const newValue = inputValue.slice(0, cursorPosition) + text + inputValue.slice(cursorPosition)
-						setInputValue(newValue)
-						const newCursorPosition = cursorPosition + text.length
-						setCursorPosition(newCursorPosition)
-						setIntendedCursorPosition(newCursorPosition)
+						// Split text on newlines to handle multiple files
+						const lines = text.split(/\r?\n/).filter((line) => line.trim() !== "")
+
+						if (lines.length > 0) {
+							// Process each line as a separate file path
+							let newValue = inputValue.slice(0, cursorPosition)
+							let totalLength = 0
+
+							lines.forEach((line, index) => {
+								// Convert each path to a mention-friendly format
+								const mentionText = convertToMentionPath(line, cwd)
+								newValue += mentionText
+								totalLength += mentionText.length
+
+								// Add space after each mention except the last one
+								if (index < lines.length - 1) {
+									newValue += " "
+									totalLength += 1
+								}
+							})
+
+							// Add space after the last mention and append the rest of the input
+							newValue += " " + inputValue.slice(cursorPosition)
+							totalLength += 1
+
+							setInputValue(newValue)
+							const newCursorPosition = cursorPosition + totalLength
+							setCursorPosition(newCursorPosition)
+							setIntendedCursorPosition(newCursorPosition)
+						}
 						return
 					}
+
 					const acceptedTypes = ["png", "jpeg", "webp"]
 					const imageFiles = files.filter((file) => {
 						const [type, subtype] = file.type.split("/")
 						return type === "image" && acceptedTypes.includes(subtype)
 					})
+
 					if (!shouldDisableImages && imageFiles.length > 0) {
 						const imagePromises = imageFiles.map((file) => {
 							return new Promise<string | null>((resolve) => {
@@ -607,6 +648,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 							setSelectedIndex={setSelectedMenuIndex}
 							selectedType={selectedType}
 							queryItems={queryItems}
+							modes={getAllModes(customModes)}
 						/>
 					</div>
 				)}
@@ -720,115 +762,110 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 						marginTop: "auto",
 						paddingTop: "2px",
 					}}>
+					{/* Left side - dropdowns container */}
 					<div
 						style={{
 							display: "flex",
 							alignItems: "center",
+							gap: "4px",
+							overflow: "hidden",
+							minWidth: 0,
 						}}>
-						<div style={{ position: "relative", display: "inline-block" }}>
-							<select
+						{/* Mode selector - fixed width */}
+						<div style={{ flexShrink: 0 }}>
+							<SelectDropdown
 								value={mode}
 								disabled={textAreaDisabled}
-								onChange={(e) => {
-									const value = e.target.value
-									if (value === "prompts-action") {
-										window.postMessage({ type: "action", action: "promptsButtonClicked" })
-										return
-									}
+								title="Select mode for interaction"
+								options={[
+									// Add the shortcut text as a disabled option at the top
+									{
+										value: "shortcut",
+										label: modeShortcutText,
+										disabled: true,
+										type: DropdownOptionType.SHORTCUT,
+									},
+									// Add all modes
+									...getAllModes(customModes).map((mode) => ({
+										value: mode.slug,
+										label: mode.name,
+										type: DropdownOptionType.ITEM,
+									})),
+									// Add separator
+									{
+										value: "sep-1",
+										label: "Separator",
+										type: DropdownOptionType.SEPARATOR,
+									},
+									// Add Edit option
+									{
+										value: "promptsButtonClicked",
+										label: "Edit...",
+										type: DropdownOptionType.ACTION,
+									},
+								]}
+								onChange={(value) => {
 									setMode(value as Mode)
 									vscode.postMessage({
 										type: "mode",
 										text: value,
 									})
 								}}
-								style={{
-									...selectStyle,
-									minWidth: "70px",
-									flex: "0 0 auto",
-								}}>
-								{getAllModes(customModes).map((mode) => (
-									<option key={mode.slug} value={mode.slug} style={{ ...optionStyle }}>
-										{mode.name}
-									</option>
-								))}
-								<option
-									disabled
-									style={{
-										borderTop: "1px solid var(--vscode-dropdown-border)",
-										...optionStyle,
-									}}>
-									────
-								</option>
-								<option value="prompts-action" style={{ ...optionStyle }}>
-									Edit...
-								</option>
-							</select>
-							<div style={caretContainerStyle}>
-								<CaretIcon />
-							</div>
+								shortcutText={modeShortcutText}
+								triggerClassName="w-full"
+							/>
 						</div>
 
+						{/* API configuration selector - flexible width */}
 						<div
 							style={{
-								position: "relative",
-								display: "inline-block",
 								flex: "1 1 auto",
 								minWidth: 0,
-								maxWidth: "150px",
 								overflow: "hidden",
 							}}>
-							<select
+							<SelectDropdown
 								value={currentApiConfigName || ""}
 								disabled={textAreaDisabled}
-								onChange={(e) => {
-									const value = e.target.value
-									if (value === "settings-action") {
-										window.postMessage({ type: "action", action: "settingsButtonClicked" })
-										return
-									}
+								title="Select API configuration"
+								options={[
+									// Add all API configurations
+									...(listApiConfigMeta || []).map((config) => ({
+										value: config.name,
+										label: config.name,
+										type: DropdownOptionType.ITEM,
+									})),
+									// Add separator
+									{
+										value: "sep-2",
+										label: "Separator",
+										type: DropdownOptionType.SEPARATOR,
+									},
+									// Add Edit option
+									{
+										value: "settingsButtonClicked",
+										label: "Edit...",
+										type: DropdownOptionType.ACTION,
+									},
+								]}
+								onChange={(value) => {
 									vscode.postMessage({
 										type: "loadApiConfiguration",
 										text: value,
 									})
 								}}
-								style={{
-									...selectStyle,
-									width: "100%",
-									textOverflow: "ellipsis",
-								}}>
-								{(listApiConfigMeta || []).map((config) => (
-									<option
-										key={config.name}
-										value={config.name}
-										style={{
-											...optionStyle,
-										}}>
-										{config.name}
-									</option>
-								))}
-								<option
-									disabled
-									style={{
-										borderTop: "1px solid var(--vscode-dropdown-border)",
-										...optionStyle,
-									}}>
-									────
-								</option>
-								<option value="settings-action" style={{ ...optionStyle }}>
-									Edit...
-								</option>
-							</select>
-							<div style={caretContainerStyle}>
-								<CaretIcon />
-							</div>
+								contentClassName="max-h-[300px] overflow-y-auto"
+								triggerClassName="w-full text-ellipsis overflow-hidden"
+							/>
 						</div>
 					</div>
 
+					{/* Right side - action buttons */}
 					<div
 						style={{
 							display: "flex",
 							alignItems: "center",
-							gap: "12px",
+							gap: "8px",
+							flexShrink: 0,
 						}}>
 						<div style={{ display: "flex", alignItems: "center" }}>
 							{isEnhancingPrompt ? (
@@ -838,7 +875,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 										color: "var(--vscode-input-foreground)",
 										opacity: 0.5,
 										fontSize: 16.5,
-										marginRight: 10,
+										marginRight: 6,
 									}}
 								/>
 							) : (
@@ -846,6 +883,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 									role="button"
 									aria-label="enhance prompt"
 									data-testid="enhance-prompt-button"
+									title="Enhance prompt with additional context"
 									className={`input-icon-button ${
 										textAreaDisabled ? "disabled" : ""
 									} codicon codicon-sparkle`}
@@ -858,11 +896,13 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 							className={`input-icon-button ${
 								shouldDisableImages ? "disabled" : ""
 							} codicon codicon-device-camera`}
+							title="Add images to message"
 							onClick={() => !shouldDisableImages && onSelectImages()}
 							style={{ fontSize: 16.5 }}
 						/>
 						<span
 							className={`input-icon-button ${textAreaDisabled ? "disabled" : ""} codicon codicon-send`}
+							title="Send message"
 							onClick={() => !textAreaDisabled && onSend()}
 							style={{ fontSize: 15 }}
 						/>

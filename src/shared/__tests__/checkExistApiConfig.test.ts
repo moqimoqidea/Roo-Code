@@ -32,6 +32,7 @@ describe("checkExistKey", () => {
 			apiKey: "test-key",
 			apiProvider: undefined,
 			anthropicBaseUrl: undefined,
+			modelMaxThinkingTokens: undefined,
 		}
 		expect(checkExistKey(config)).toBe(true)
 	})
@@ -51,6 +52,8 @@ describe("checkExistKey", () => {
 			deepSeekApiKey: undefined,
 			mistralApiKey: undefined,
 			vsCodeLmModelSelector: undefined,
+			requestyApiKey: undefined,
+			unboundApiKey: undefined,
 		}
 		expect(checkExistKey(config)).toBe(false)
 	})

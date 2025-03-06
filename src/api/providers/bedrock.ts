@@ -6,10 +6,13 @@ import {
 } from "@aws-sdk/client-bedrock-runtime"
 import { fromIni } from "@aws-sdk/credential-providers"
 import { Anthropic } from "@anthropic-ai/sdk"
-import { ApiHandler, SingleCompletionHandler } from "../"
+import { SingleCompletionHandler } from "../"
 import { ApiHandlerOptions, BedrockModelId, ModelInfo, bedrockDefaultModelId, bedrockModels } from "../../shared/api"
 import { ApiStream } from "../transform/stream"
-import { convertToBedrockConverseMessages, convertToAnthropicMessage } from "../transform/bedrock-converse-format"
+import { convertToBedrockConverseMessages } from "../transform/bedrock-converse-format"
+import { BaseProvider } from "./base-provider"
+
+const BEDROCK_DEFAULT_TEMPERATURE = 0.3
 
 // Define types for stream events based on AWS SDK
 export interface StreamEvent {
@@ -44,11 +47,12 @@ export interface StreamEvent {
 	}
 }
 
-export class AwsBedrockHandler implements ApiHandler, SingleCompletionHandler {
-	private options: ApiHandlerOptions
+export class AwsBedrockHandler extends BaseProvider implements SingleCompletionHandler {
+	protected options: ApiHandlerOptions
 	private client: BedrockRuntimeClient
 
 	constructor(options: ApiHandlerOptions) {
+		super()
 		this.options = options
 
 		const clientConfig: BedrockRuntimeClientConfig = {
@@ -72,7 +76,7 @@ export class AwsBedrockHandler implements ApiHandler, SingleCompletionHandler {
 		this.client = new BedrockRuntimeClient(clientConfig)
 	}
 
-	async *createMessage(systemPrompt: string, messages: Anthropic.Messages.MessageParam[]): ApiStream {
+	override async *createMessage(systemPrompt: string, messages: Anthropic.Messages.MessageParam[]): ApiStream {
 		const modelConfig = this.getModel()
 
 		// Handle cross-region inference
@@ -104,7 +108,7 @@ export class AwsBedrockHandler implements ApiHandler, SingleCompletionHandler {
 			system: [{ text: systemPrompt }],
 			inferenceConfig: {
 				maxTokens: modelConfig.info.maxTokens || 5000,
-				temperature: 0.3,
+				temperature: this.options.modelTemperature ?? BEDROCK_DEFAULT_TEMPERATURE,
 				topP: 0.1,
 				...(this.options.awsUsePromptCache
 					? {
@@ -203,7 +207,7 @@ export class AwsBedrockHandler implements ApiHandler, SingleCompletionHandler {
 		}
 	}
 
-	getModel(): { id: BedrockModelId | string; info: ModelInfo } {
+	override getModel(): { id: BedrockModelId | string; info: ModelInfo } {
 		const modelId = this.options.apiModelId
 		if (modelId) {
 			// For tests, allow any model ID
@@ -262,7 +266,7 @@ export class AwsBedrockHandler implements ApiHandler, SingleCompletionHandler {
 				]),
 				inferenceConfig: {
 					maxTokens: modelConfig.info.maxTokens || 5000,
-					temperature: 0.3,
+					temperature: this.options.modelTemperature ?? BEDROCK_DEFAULT_TEMPERATURE,
 					topP: 0.1,
 				},
 			}

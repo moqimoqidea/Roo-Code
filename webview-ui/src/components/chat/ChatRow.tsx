@@ -2,6 +2,7 @@ import { VSCodeBadge, VSCodeButton, VSCodeProgressRing } from "@vscode/webview-u
 import deepEqual from "fast-deep-equal"
 import React, { memo, useEffect, useMemo, useRef, useState } from "react"
 import { useSize } from "react-use"
+import { useCopyToClipboard } from "../../utils/clipboard"
 import {
 	ClineApiReqInfo,
 	ClineAskUseMcpServer,
@@ -15,20 +16,21 @@ import { vscode } from "../../utils/vscode"
 import CodeAccordian, { removeLeadingNonAlphanumeric } from "../common/CodeAccordian"
 import CodeBlock, { CODE_BLOCK_BG_COLOR } from "../common/CodeBlock"
 import MarkdownBlock from "../common/MarkdownBlock"
-import ReasoningBlock from "./ReasoningBlock"
+import { ReasoningBlock } from "./ReasoningBlock"
 import Thumbnails from "../common/Thumbnails"
 import McpResourceRow from "../mcp/McpResourceRow"
 import McpToolRow from "../mcp/McpToolRow"
 import { highlightMentions } from "./TaskHeader"
+import { CheckpointSaved } from "./checkpoints/CheckpointSaved"
 
 interface ChatRowProps {
 	message: ClineMessage
-	isExpanded: boolean
-	onToggleExpand: () => void
 	lastModifiedMessage?: ClineMessage
+	isExpanded: boolean
 	isLast: boolean
-	onHeightChange: (isTaller: boolean) => void
 	isStreaming: boolean
+	onToggleExpand: () => void
+	onHeightChange: (isTaller: boolean) => void
 }
 
 interface ChatRowContentProps extends Omit<ChatRowProps, "onHeightChange"> {}
@@ -41,10 +43,7 @@ const ChatRow = memo(
 		const prevHeightRef = useRef(0)
 
 		const [chatrow, { height }] = useSize(
-			<div
-				style={{
-					padding: "10px 6px 10px 15px",
-				}}>
+			<div className="px-[15px] py-[10px] pr-[6px]">
 				<ChatRowContent {...props} />
 			</div>,
 		)
@@ -73,33 +72,32 @@ export default ChatRow
 
 export const ChatRowContent = ({
 	message,
-	isExpanded,
-	onToggleExpand,
 	lastModifiedMessage,
+	isExpanded,
 	isLast,
 	isStreaming,
+	onToggleExpand,
 }: ChatRowContentProps) => {
-	const { mcpServers, alwaysAllowMcp } = useExtensionState()
-	const [reasoningCollapsed, setReasoningCollapsed] = useState(false)
+	const { mcpServers, alwaysAllowMcp, currentCheckpoint } = useExtensionState()
+	const [reasoningCollapsed, setReasoningCollapsed] = useState(true)
 
-	// Auto-collapse reasoning when new messages arrive
-	useEffect(() => {
-		if (!isLast && message.say === "reasoning") {
-			setReasoningCollapsed(true)
-		}
-	}, [isLast, message.say])
 	const [cost, apiReqCancelReason, apiReqStreamingFailedMessage] = useMemo(() => {
-		if (message.text != null && message.say === "api_req_started") {
+		if (message.text !== null && message.text !== undefined && message.say === "api_req_started") {
 			const info: ClineApiReqInfo = JSON.parse(message.text)
 			return [info.cost, info.cancelReason, info.streamingFailedMessage]
 		}
+
 		return [undefined, undefined, undefined]
 	}, [message.text, message.say])
-	// when resuming task, last wont be api_req_failed but a resume_task message, so api_req_started will show loading spinner. that's why we just remove the last api_req_started that failed without streaming anything
+
+	// When resuming task, last wont be api_req_failed but a resume_task
+	// message, so api_req_started will show loading spinner. That's why we just
+	// remove the last api_req_started that failed without streaming anything.
 	const apiRequestFailedMessage =
 		isLast && lastModifiedMessage?.ask === "api_req_failed" // if request is retried then the latest message is a api_req_retried
 			? lastModifiedMessage?.text
 			: undefined
+
 	const isCommandExecuting =
 		isLast && lastModifiedMessage?.ask === "command" && lastModifiedMessage?.text?.includes(COMMAND_OUTPUT_STRING)
 
@@ -183,26 +181,26 @@ export const ChatRowContent = ({
 					</div>
 				)
 				return [
-					apiReqCancelReason != null ? (
+					apiReqCancelReason !== null && apiReqCancelReason !== undefined ? (
 						apiReqCancelReason === "user_cancelled" ? (
 							getIconSpan("error", cancelledColor)
 						) : (
 							getIconSpan("error", errorColor)
 						)
-					) : cost != null ? (
+					) : cost !== null && cost !== undefined ? (
 						getIconSpan("check", successColor)
 					) : apiRequestFailedMessage ? (
 						getIconSpan("error", errorColor)
 					) : (
 						<ProgressIndicator />
 					),
-					apiReqCancelReason != null ? (
+					apiReqCancelReason !== null && apiReqCancelReason !== undefined ? (
 						apiReqCancelReason === "user_cancelled" ? (
 							<span style={{ color: normalColor, fontWeight: "bold" }}>API Request Cancelled</span>
 						) : (
 							<span style={{ color: errorColor, fontWeight: "bold" }}>API Streaming Failed</span>
 						)
-					) : cost != null ? (
+					) : cost !== null && cost !== undefined ? (
 						<span style={{ color: normalColor, fontWeight: "bold" }}>API Request</span>
 					) : apiRequestFailedMessage ? (
 						<span style={{ color: errorColor, fontWeight: "bold" }}>API Request Failed</span>
@@ -426,32 +424,6 @@ export const ChatRowContent = ({
 						/>
 					</>
 				)
-			// case "inspectSite":
-			// 	const isInspecting =
-			// 		isLast && lastModifiedMessage?.say === "inspect_site_result" && !lastModifiedMessage?.images
-			// 	return (
-			// 		<>
-			// 			<div style={headerStyle}>
-			// 				{isInspecting ? <ProgressIndicator /> : toolIcon("inspect")}
-			// 				<span style={{ fontWeight: "bold" }}>
-			// 					{message.type === "ask" ? (
-			// 						<>Roo wants to inspect this website:</>
-			// 					) : (
-			// 						<>Roo is inspecting this website:</>
-			// 					)}
-			// 				</span>
-			// 			</div>
-			// 			<div
-			// 				style={{
-			// 					borderRadius: 3,
-			// 					border: "1px solid var(--vscode-editorGroup-border)",
-			// 					overflow: "hidden",
-			// 					backgroundColor: CODE_BLOCK_BG_COLOR,
-			// 				}}>
-			// 				<CodeBlock source={`${"```"}shell\n${tool.path}\n${"```"}`} forceWrap={true} />
-			// 			</div>
-			// 		</>
-			// 	)
 			case "switchMode":
 				return (
 					<>
@@ -499,6 +471,7 @@ export const ChatRowContent = ({
 					return (
 						<ReasoningBlock
 							content={message.text || ""}
+							elapsed={isLast && isStreaming ? Date.now() - message.ts : undefined}
 							isCollapsed={reasoningCollapsed}
 							onToggleCollapse={() => setReasoningCollapsed(!reasoningCollapsed)}
 						/>
@@ -510,7 +483,8 @@ export const ChatRowContent = ({
 								style={{
 									...headerStyle,
 									marginBottom:
-										(cost == null && apiRequestFailedMessage) || apiReqStreamingFailedMessage
+										((cost === null || cost === undefined) && apiRequestFailedMessage) ||
+										apiReqStreamingFailedMessage
 											? 10
 											: 0,
 									justifyContent: "space-between",
@@ -524,13 +498,15 @@ export const ChatRowContent = ({
 								<div style={{ display: "flex", alignItems: "center", gap: "10px", flexGrow: 1 }}>
 									{icon}
 									{title}
-									<VSCodeBadge style={{ opacity: cost != null && cost > 0 ? 1 : 0 }}>
+									<VSCodeBadge
+										style={{ opacity: cost !== null && cost !== undefined && cost > 0 ? 1 : 0 }}>
 										${Number(cost || 0)?.toFixed(4)}
 									</VSCodeBadge>
 								</div>
 								<span className={`codicon codicon-chevron-${isExpanded ? "up" : "down"}`}></span>
 							</div>
-							{((cost == null && apiRequestFailedMessage) || apiReqStreamingFailedMessage) && (
+							{(((cost === null || cost === undefined) && apiRequestFailedMessage) ||
+								apiReqStreamingFailedMessage) && (
 								<>
 									<p style={{ ...pStyle, color: "var(--vscode-errorForeground)" }}>
 										{apiRequestFailedMessage || apiReqStreamingFailedMessage}
@@ -612,8 +588,10 @@ export const ChatRowContent = ({
 								color: "var(--vscode-badge-foreground)",
 								borderRadius: "3px",
 								padding: "9px",
-								whiteSpace: "pre-line",
-								wordWrap: "break-word",
+								overflow: "hidden",
+								whiteSpace: "pre-wrap",
+								wordBreak: "break-word",
+								overflowWrap: "anywhere",
 							}}>
 							<div
 								style={{
@@ -750,6 +728,15 @@ export const ChatRowContent = ({
 								/>
 							</div>
 						</>
+					)
+				case "checkpoint_saved":
+					return (
+						<CheckpointSaved
+							ts={message.ts!}
+							commitHash={message.text!}
+							currentHash={currentCheckpoint}
+							checkpoint={message.checkpoint}
+						/>
 					)
 				default:
 					return (
@@ -982,6 +969,7 @@ export const ProgressIndicator = () => (
 
 const Markdown = memo(({ markdown, partial }: { markdown?: string; partial?: boolean }) => {
 	const [isHovering, setIsHovering] = useState(false)
+	const { copyWithFeedback } = useCopyToClipboard(200) // shorter feedback duration for copy button flash
 
 	return (
 		<div
@@ -1018,15 +1006,16 @@ const Markdown = memo(({ markdown, partial }: { markdown?: string; partial?: boo
 							background: "var(--vscode-editor-background)",
 							transition: "background 0.2s ease-in-out",
 						}}
-						onClick={() => {
-							navigator.clipboard.writeText(markdown)
-							// Flash the button background briefly to indicate success
-							const button = document.activeElement as HTMLElement
-							if (button) {
-								button.style.background = "var(--vscode-button-background)"
-								setTimeout(() => {
-									button.style.background = ""
-								}, 200)
+						onClick={async () => {
+							const success = await copyWithFeedback(markdown)
+							if (success) {
+								const button = document.activeElement as HTMLElement
+								if (button) {
+									button.style.background = "var(--vscode-button-background)"
+									setTimeout(() => {
+										button.style.background = ""
+									}, 200)
+								}
 							}
 						}}
 						title="Copy as markdown">

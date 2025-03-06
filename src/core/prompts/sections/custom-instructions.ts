@@ -1,21 +1,27 @@
 import fs from "fs/promises"
 import path from "path"
 
+async function safeReadFile(filePath: string): Promise<string> {
+	try {
+		const content = await fs.readFile(filePath, "utf-8")
+		return content.trim()
+	} catch (err) {
+		const errorCode = (err as NodeJS.ErrnoException).code
+		if (!errorCode || !["ENOENT", "EISDIR"].includes(errorCode)) {
+			throw err
+		}
+		return ""
+	}
+}
+
 export async function loadRuleFiles(cwd: string): Promise<string> {
 	const ruleFiles = [".clinerules", ".cursorrules", ".windsurfrules"]
 	let combinedRules = ""
 
 	for (const file of ruleFiles) {
-		try {
-			const content = await fs.readFile(path.join(cwd, file), "utf-8")
-			if (content.trim()) {
-				combinedRules += `\n# Rules from ${file}:\n${content.trim()}\n`
-			}
-		} catch (err) {
-			// Silently skip if file doesn't exist
-			if ((err as NodeJS.ErrnoException).code !== "ENOENT") {
-				throw err
-			}
+		const content = await safeReadFile(path.join(cwd, file))
+		if (content) {
+			combinedRules += `\n# Rules from ${file}:\n${content}\n`
 		}
 	}
 
@@ -27,25 +33,15 @@ export async function addCustomInstructions(
 	globalCustomInstructions: string,
 	cwd: string,
 	mode: string,
-	options: { preferredLanguage?: string } = {},
+	options: { preferredLanguage?: string; rooIgnoreInstructions?: string } = {},
 ): Promise<string> {
 	const sections = []
 
 	// Load mode-specific rules if mode is provided
 	let modeRuleContent = ""
 	if (mode) {
-		try {
-			const modeRuleFile = `.clinerules-${mode}`
-			const content = await fs.readFile(path.join(cwd, modeRuleFile), "utf-8")
-			if (content.trim()) {
-				modeRuleContent = content.trim()
-			}
-		} catch (err) {
-			// Silently skip if file doesn't exist
-			if ((err as NodeJS.ErrnoException).code !== "ENOENT") {
-				throw err
-			}
-		}
+		const modeRuleFile = `.clinerules-${mode}`
+		modeRuleContent = await safeReadFile(path.join(cwd, modeRuleFile))
 	}
 
 	// Add language preference if provided
@@ -72,6 +68,10 @@ export async function addCustomInstructions(
 	if (modeRuleContent && modeRuleContent.trim()) {
 		const modeRuleFile = `.clinerules-${mode}`
 		rules.push(`# Rules from ${modeRuleFile}:\n${modeRuleContent}`)
+	}
+
+	if (options.rooIgnoreInstructions) {
+		rules.push(options.rooIgnoreInstructions)
 	}
 
 	// Add generic rules

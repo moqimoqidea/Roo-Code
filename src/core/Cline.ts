@@ -925,7 +925,9 @@ export class Cline {
 
 		const sendCommandOutput = async (line: string) => {
 			try {
+				console.log(`[executeCommandTool#sendCommandOutput] calling ask with line.length = ${line.length}`)
 				const { response, text, images } = await this.ask("command_output", line)
+				console.log(`[executeCommandTool#sendCommandOutput] ask completed with response = ${response}`)
 
 				if (response === "yesButtonClicked") {
 					// Proceed while running.
@@ -935,8 +937,9 @@ export class Cline {
 
 				didContinue = true
 				process.continue() // Continue past the await.
-			} catch {
+			} catch (error) {
 				// This can only happen if this ask promise was ignored, so ignore this error.
+				console.log(`[executeCommandTool#sendCommandOutput] caught error: ${error.message}`)
 			}
 		}
 
@@ -947,6 +950,7 @@ export class Cline {
 		let output: string | undefined = undefined
 
 		process.on("line", (line) => {
+			console.log(`[executeCommandTool#on("line")] line.length = ${line.length}`)
 			builder.append(line)
 
 			if (!didContinue) {
@@ -957,6 +961,7 @@ export class Cline {
 		})
 
 		process.once("completed", (buffer?: string) => {
+			console.log(`[executeCommandTool#on("completed")] buffer.length = ${buffer?.length ?? 0}`)
 			output = buffer
 			completed = true
 		})
@@ -977,7 +982,9 @@ export class Cline {
 			}
 		})
 
+		console.log(`[executeCommandTool] awaiting process`)
 		await process
+		console.log(`[executeCommandTool] process completed`)
 
 		// Wait for a short delay to ensure all messages are sent to the webview.
 		// This delay allows time for non-awaited promises to be created and

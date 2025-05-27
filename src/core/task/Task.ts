@@ -1521,6 +1521,12 @@ export class Task extends EventEmitter<ClineEvents> {
 			autoCondenseContextPercent = 100,
 		} = state ?? {}
 
+		// show apiProvider and apiModelId
+		const { apiProvider, apiModelId } = apiConfiguration || {}
+		if (!apiProvider || !apiModelId) {
+			throw new Error("API model ID is not defined in the state")
+		}
+
 		// Get condensing configuration for automatic triggers
 		const customCondensingPrompt = state?.customCondensingPrompt
 		const condensingApiConfigId = state?.condensingApiConfigId

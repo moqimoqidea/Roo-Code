@@ -90,6 +90,7 @@ export class AnthropicHandler extends BaseProvider implements SingleCompletionHa
 							return message
 						}),
 						stream: true,
+						...(metadata?.tools && metadata.tools.length > 0 && { tools: metadata.tools }),
 					},
 					(() => {
 						// prompt caching: https://x.com/alexalbert__/status/1823751995901272068
@@ -122,6 +123,7 @@ export class AnthropicHandler extends BaseProvider implements SingleCompletionHa
 					system: [{ text: systemPrompt, type: "text" }],
 					messages,
 					stream: true,
+					...(metadata?.tools && metadata.tools.length > 0 && { tools: metadata.tools }),
 				})) as any
 				break
 			}

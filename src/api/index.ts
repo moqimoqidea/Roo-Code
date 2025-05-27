@@ -36,6 +36,7 @@ export interface SingleCompletionHandler {
 export interface ApiHandlerCreateMessageMetadata {
 	mode?: string
 	taskId: string
+	tools?: any[] // Tools metadata for providers that support structured tools (like Anthropic)
 }
 
 export interface ApiHandler {

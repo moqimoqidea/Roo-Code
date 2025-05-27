@@ -24,6 +24,7 @@ import type {
 // api
 import { ApiHandler, ApiHandlerCreateMessageMetadata, buildApiHandler } from "../../api"
 import { ApiStream } from "../../api/transform/stream"
+import { getAnthropicToolsForMode } from "../../api/providers/anthropic-tools"
 
 // shared
 import { findLastIndex } from "../../shared/array"
@@ -1636,6 +1637,14 @@ export class Task extends EventEmitter<ClineEvents> {
 		const metadata: ApiHandlerCreateMessageMetadata = {
 			mode: mode,
 			taskId: this.taskId,
+		}
+
+		// Add tools metadata for Anthropic provider
+		if (this.apiConfiguration.apiProvider === "anthropic" && mode) {
+			const anthropicTools = getAnthropicToolsForMode(mode)
+			if (anthropicTools.length > 0) {
+				metadata.tools = anthropicTools
+			}
 		}
 
 		const stream = this.api.createMessage(systemPrompt, cleanConversationHistory, metadata)

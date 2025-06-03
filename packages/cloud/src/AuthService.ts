@@ -439,23 +439,4 @@ export class AuthService extends EventEmitter<AuthServiceEvents> {
 		return getUserAgent(this.context)
 	}
 
-	private static _instance: AuthService | null = null
-
-	static get instance() {
-		if (!this._instance) {
-			throw new Error("AuthService not initialized")
-		}
-
-		return this._instance
-	}
-
-	static async createInstance(context: vscode.ExtensionContext, log?: (...args: unknown[]) => void) {
-		if (this._instance) {
-			throw new Error("AuthService instance already created")
-		}
-
-		this._instance = new AuthService(context, log)
-		await this._instance.initialize()
-		return this._instance
-	}
 }

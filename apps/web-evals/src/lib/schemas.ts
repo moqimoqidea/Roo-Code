@@ -6,9 +6,11 @@ import { rooCodeSettingsSchema } from "@roo-code/types"
  * CreateRun
  */
 
+export const MODEL_DEFAULT = "anthropic/claude-sonnet-4"
+
 export const CONCURRENCY_MIN = 1
 export const CONCURRENCY_MAX = 25
-export const CONCURRENCY_DEFAULT = 2
+export const CONCURRENCY_DEFAULT = 1
 
 export const createRunSchema = z
 	.object({
@@ -17,7 +19,7 @@ export const createRunSchema = z
 		suite: z.enum(["full", "partial"]),
 		exercises: z.array(z.string()).optional(),
 		settings: rooCodeSettingsSchema.optional(),
-		concurrency: z.number().int().min(CONCURRENCY_MIN).max(CONCURRENCY_MAX).default(CONCURRENCY_DEFAULT),
+		concurrency: z.number().int().min(CONCURRENCY_MIN).max(CONCURRENCY_MAX),
 		systemPrompt: z.string().optional(),
 	})
 	.refine((data) => data.suite === "full" || (data.exercises || []).length > 0, {

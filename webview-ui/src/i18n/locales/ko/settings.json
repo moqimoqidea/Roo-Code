@@ -44,6 +44,12 @@
 		"selectProviderPlaceholder": "제공자 선택",
 		"openaiProvider": "OpenAI",
 		"ollamaProvider": "Ollama",
+		"openaiCompatibleProvider": "OpenAI 호환",
+		"openaiCompatibleBaseUrlLabel": "기본 URL:",
+		"openaiCompatibleApiKeyLabel": "API 키:",
+		"openaiCompatibleModelDimensionLabel": "임베딩 차원:",
+		"openaiCompatibleModelDimensionPlaceholder": "예: 1536",
+		"openaiCompatibleModelDimensionDescription": "모델의 임베딩 차원(출력 크기)입니다. 이 값에 대해서는 제공업체의 문서를 확인하세요. 일반적인 값: 384, 768, 1536, 3072.",
 		"openaiKeyLabel": "OpenAI 키:",
 		"modelLabel": "모델",
 		"selectModelPlaceholder": "모델 선택",
@@ -77,6 +83,10 @@
 			"outsideWorkspace": {
 				"label": "워크스페이스 외부 파일 포함",
 				"description": "Roo가 승인 없이 현재 워크스페이스 외부의 파일을 생성하고 편집할 수 있도록 허용합니다."
+			},
+			"protected": {
+				"label": "보호된 파일 포함",
+				"description": "Roo가 보호된 파일(.rooignore 및 .roo/ 구성 파일 등)을 승인 없이 생성하고 편집할 수 있도록 허용합니다."
 			}
 		},
 		"browser": {
@@ -485,7 +495,19 @@
 		},
 		"CONCURRENT_FILE_READS": {
 			"name": "동시 파일 읽기 활성화",
-			"description": "활성화하면 Roo가 한 번의 요청으로 여러 파일(최대 15개)을 읽을 수 있습니다. 비활성화하면 Roo는 파일을 하나씩 읽어야 합니다. 성능이 낮은 모델로 작업하거나 파일 액세스를 더 제어하려는 경우 비활성화하면 도움이 될 수 있습니다."
+			"description": "활성화하면 Roo가 한 번의 요청으로 여러 파일 을 읽을 수 있습니다. 비활성화하면 Roo는 파일을 하나씩 읽어야 합니다. 성능이 낮은 모델로 작업하거나 파일 액세스를 더 제어하려는 경우 비활성화하면 도움이 될 수 있습니다."
+		},
+		"MARKETPLACE": {
+			"name": "Marketplace 활성화",
+			"description": "활성화하면 Marketplace에서 MCP와 사용자 정의 모드를 설치할 수 있습니다."
+		},
+		"DISABLE_COMPLETION_COMMAND": {
+			"name": "attempt_completion에서 명령 실행 비활성화",
+			"description": "활성화하면 attempt_completion 도구가 명령을 실행하지 않습니다. 이는 작업 완료 시 명령 실행을 더 이상 사용하지 않도록 준비하기 위한 실험적 기능입니다."
+		},
+		"MULTI_FILE_APPLY_DIFF": {
+			"name": "동시 파일 편집 활성화",
+			"description": "활성화하면 Roo가 단일 요청으로 여러 파일을 편집할 수 있습니다. 비활성화하면 Roo는 파일을 하나씩 편집해야 합니다. 이 기능을 비활성화하면 덜 강력한 모델로 작업하거나 파일 수정에 대한 더 많은 제어가 필요할 때 도움이 됩니다."
 		}
 	},
 	"promptCaching": {
@@ -591,5 +613,7 @@
 	"labels": {
 		"customArn": "사용자 지정 ARN",
 		"useCustomArn": "사용자 지정 ARN 사용..."
-	}
+	},
+	"includeMaxOutputTokens": "최대 출력 토큰 포함",
+	"includeMaxOutputTokensDescription": "API 요청에서 최대 출력 토큰 매개변수를 전송합니다. 일부 제공업체는 이를 지원하지 않을 수 있습니다."
 }

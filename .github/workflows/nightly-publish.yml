@@ -11,7 +11,7 @@ on:
 jobs:
   publish-nightly:
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
 
     permissions:
       contents: read # No tags pushed → read is enough.
@@ -46,7 +46,7 @@ jobs:
             console.log(`🔖 Nightly version set to ${pkg.version}`);
           EOF
       - name: Build VSIX
-        run: pnpm build:nightly # Produces bin/roo-code-nightly-0.0.[count].vsix
+        run: pnpm vsix:nightly # Produces bin/roo-code-nightly-0.0.[count].vsix
       - name: Publish to VS Code Marketplace
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}

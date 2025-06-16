@@ -1,242 +1,382 @@
-import { ZodError } from "zod"
+import EventEmitter from "events"
+import { isEqual } from "lodash"
+import { RooCodeTelemetryEvent, TelemetryEventName } from "@roo-code/types"
+import { v4 as uuidv4 } from "uuid"
 
-import { type TelemetryClient, type TelemetryPropertiesProvider, TelemetryEventName } from "@roo-code/types"
+export interface TelemetryServiceOptions {
+	logEvents?: boolean
+	trackEvents?: boolean
+	captureRateSamplingPercent?: number
+	clientId?: string
+	sessionId?: string
+}
 
-/**
- * TelemetryService wrapper class that defers initialization.
- * This ensures that we only create the various clients after environment
- * variables are loaded.
- */
 export class TelemetryService {
-	constructor(private clients: TelemetryClient[]) {}
+	static instance: TelemetryService
 
-	public register(client: TelemetryClient): void {
-		this.clients.push(client)
-	}
-
-	/**
-	 * Sets the ClineProvider reference to use for global properties
-	 * @param provider A ClineProvider instance to use
-	 */
-	public setProvider(provider: TelemetryPropertiesProvider): void {
-		// If client is initialized, pass the provider reference.
-		if (this.isReady) {
-			this.clients.forEach((client) => client.setProvider(provider))
+	static instantiate(options?: TelemetryServiceOptions) {
+		if (!TelemetryService.instance) {
+			TelemetryService.instance = new TelemetryService(options ?? {})
 		}
+
+		if (options) {
+			TelemetryService.instance.logEvents = options?.logEvents ?? TelemetryService.instance.logEvents
+			TelemetryService.instance.trackEvents = options?.trackEvents ?? TelemetryService.instance.trackEvents
+			TelemetryService.instance.clientId = options?.clientId ?? TelemetryService.instance.clientId
+			TelemetryService.instance.sessionId = options?.sessionId ?? TelemetryService.instance.sessionId
+		}
+
+		return TelemetryService.instance
 	}
 
-	/**
-	 * Base method for all telemetry operations
-	 * Checks if the service is initialized before performing any operation
-	 * @returns Whether the service is ready to use
-	 */
-	private get isReady(): boolean {
-		return this.clients.length > 0
+	private readonly eventEmitter = new EventEmitter()
+	private logEvents: boolean = false
+	private trackEvents: boolean = false
+	private clientId: string = "default"
+	private sessionId: string = uuidv4()
+	private captureRateSamplingPercent: number = 100
+	private lastEvents: Record<string, RooCodeTelemetryEvent> = {}
+
+	constructor(options: TelemetryServiceOptions) {
+		this.logEvents = options?.logEvents ?? this.logEvents
+		this.trackEvents = options?.trackEvents ?? this.trackEvents
+		this.clientId = options?.clientId ?? this.clientId
+		this.sessionId = options?.sessionId ?? this.sessionId
+		this.captureRateSamplingPercent = options?.captureRateSamplingPercent ?? this.captureRateSamplingPercent
 	}
 
-	/**
-	 * Updates the telemetry state based on user preferences and VSCode settings
-	 * @param didUserOptIn Whether the user has explicitly opted into telemetry
-	 */
-	public updateTelemetryState(didUserOptIn: boolean): void {
-		if (!this.isReady) {
+	public captureEvent(type: TelemetryEventName, data?: Record<string, unknown>, logEvent: boolean = true) {
+		if (!this.shouldCaptureEvent()) {
 			return
 		}
 
-		this.clients.forEach((client) => client.updateTelemetryState(didUserOptIn))
-	}
+		const event: RooCodeTelemetryEvent = {
+			type,
+			clientId: this.clientId,
+			timestamp: new Date(),
+			data,
+		}
 
-	/**
-	 * Generic method to capture any type of event with specified properties
-	 * @param eventName The event name to capture
-	 * @param properties The event properties
-	 */
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	public captureEvent(eventName: TelemetryEventName, properties?: Record<string, any>): void {
-		if (!this.isReady) {
+		const lastEvent = this.lastEvents[type]
+		if (lastEvent && isEqual(lastEvent.data, event.data)) {
 			return
 		}
 
-		this.clients.forEach((client) => client.capture({ event: eventName, properties }))
+		this.lastEvents[type] = event
+
+		if (this.logEvents && logEvent) {
+			console.log(`Telemetry event captured: ${type}`, data)
+		}
+
+		if (this.trackEvents) {
+			this.eventEmitter.emit("telemetry", event)
+		}
+
+		return event
 	}
 
-	public captureTaskCreated(taskId: string): void {
-		this.captureEvent(TelemetryEventName.TASK_CREATED, { taskId })
+	public captureSessionStart(): void {
+		this.captureEvent(TelemetryEventName.SESSION_STARTED)
 	}
 
-	public captureTaskRestarted(taskId: string): void {
-		this.captureEvent(TelemetryEventName.TASK_RESTARTED, { taskId })
+	public captureCommandRun(command: string): void {
+		this.captureEvent(TelemetryEventName.COMMAND_RUN, { command })
 	}
 
-	public captureTaskCompleted(taskId: string): void {
-		this.captureEvent(TelemetryEventName.TASK_COMPLETED, { taskId })
+	public captureSlashCommandRun(command: string): void {
+		this.captureEvent(TelemetryEventName.SLASH_COMMAND_RUN, { command })
 	}
 
-	public captureConversationMessage(taskId: string, source: "user" | "assistant"): void {
-		this.captureEvent(TelemetryEventName.TASK_CONVERSATION_MESSAGE, { taskId, source })
+	public captureContextMenuRun(command: string): void {
+		this.captureEvent(TelemetryEventName.CONTEXT_MENU_RUN, { command })
 	}
 
-	public captureLlmCompletion(
+	public captureTaskStarted(taskId: string, mode: string, codebaseIndexMode?: string): void {
+		this.captureEvent(TelemetryEventName.TASK_STARTED, { taskId, mode, codebaseIndexMode })
+	}
+
+	public captureTaskCompleted(
 		taskId: string,
-		properties: {
-			inputTokens: number
-			outputTokens: number
-			cacheWriteTokens: number
-			cacheReadTokens: number
-			cost?: number
-		},
+		numMessages: number,
+		durationMs: number,
+		mode: string,
+		tokensInput: number,
+		tokensOutput: number,
+		provider: string,
+		modelName: string,
+		toolUsage: Record<string, { attempts: number; failures: number }>,
 	): void {
-		this.captureEvent(TelemetryEventName.LLM_COMPLETION, { taskId, ...properties })
+		this.captureEvent(TelemetryEventName.TASK_COMPLETED, {
+			taskId,
+			numMessages,
+			durationMs,
+			mode,
+			tokensInput,
+			tokensOutput,
+			provider,
+			modelName,
+			toolUsage,
+		})
 	}
 
-	public captureModeSwitch(taskId: string, newMode: string): void {
-		this.captureEvent(TelemetryEventName.MODE_SWITCH, { taskId, newMode })
+	public captureTaskCancelled(
+		taskId: string,
+		numMessages: number,
+		durationMs: number,
+		mode: string,
+		tokensInput: number,
+		tokensOutput: number,
+		provider: string,
+		modelName: string,
+		toolUsage: Record<string, { attempts: number; failures: number }>,
+	): void {
+		this.captureEvent(TelemetryEventName.TASK_CANCELLED, {
+			taskId,
+			numMessages,
+			durationMs,
+			mode,
+			tokensInput,
+			tokensOutput,
+			provider,
+			modelName,
+			toolUsage,
+		})
+	}
+
+	public captureTaskConversationMessage(taskId: string, textLength: number, isUserMessage: boolean): void {
+		this.captureEvent(TelemetryEventName.TASK_CONVERSATION_MESSAGE, { taskId, textLength, isUserMessage })
+	}
+
+	public captureLlmError(taskId: string, error: string, provider: string, modelName: string): void {
+		this.captureEvent(TelemetryEventName.LLM_ERROR, { taskId, error, provider, modelName })
+	}
+
+	public captureToolError(taskId: string, error: string, tool: string): void {
+		this.captureEvent(TelemetryEventName.TOOL_ERROR, { taskId, error, tool })
+	}
+
+	public captureModeSwitched(taskId: string, mode: string): void {
+		this.captureEvent(TelemetryEventName.MODE_SWITCH, { taskId, mode })
 	}
 
 	public captureToolUsage(taskId: string, tool: string): void {
 		this.captureEvent(TelemetryEventName.TOOL_USED, { taskId, tool })
 	}
 
-	public captureCheckpointCreated(taskId: string): void {
-		this.captureEvent(TelemetryEventName.CHECKPOINT_CREATED, { taskId })
+	public captureNativeToolUsage(taskId: string, tool: string, provider: string, modelId: string): void {
+		this.captureEvent(TelemetryEventName.NATIVE_TOOL_USED, { taskId, tool, provider, modelId })
 	}
 
-	public captureCheckpointDiffed(taskId: string): void {
-		this.captureEvent(TelemetryEventName.CHECKPOINT_DIFFED, { taskId })
+	public captureCheckpointCreated(taskId: string): void {
+		this.captureEvent(TelemetryEventName.CHECKPOINT_CREATED, { taskId })
 	}
 
 	public captureCheckpointRestored(taskId: string): void {
 		this.captureEvent(TelemetryEventName.CHECKPOINT_RESTORED, { taskId })
 	}
 
-	public captureContextCondensed(
-		taskId: string,
-		isAutomaticTrigger: boolean,
-		usedCustomPrompt?: boolean,
-		usedCustomApiHandler?: boolean,
-	): void {
-		this.captureEvent(TelemetryEventName.CONTEXT_CONDENSED, {
-			taskId,
-			isAutomaticTrigger,
-			...(usedCustomPrompt !== undefined && { usedCustomPrompt }),
-			...(usedCustomApiHandler !== undefined && { usedCustomApiHandler }),
-		})
+	public captureCheckpointDiffed(taskId: string): void {
+		this.captureEvent(TelemetryEventName.CHECKPOINT_DIFFED, { taskId })
 	}
 
-	public captureSlidingWindowTruncation(taskId: string): void {
-		this.captureEvent(TelemetryEventName.SLIDING_WINDOW_TRUNCATION, { taskId })
+	public captureCheckpointError(taskId: string, error: string): void {
+		this.captureEvent(TelemetryEventName.CHECKPOINT_ERROR, { taskId, error })
 	}
 
-	public captureCodeActionUsed(actionType: string): void {
-		this.captureEvent(TelemetryEventName.CODE_ACTION_USED, { actionType })
+	public captureProviderSettingsUpdated(provider: string, modelName: string): void {
+		this.captureEvent(TelemetryEventName.PROVIDER_SETTINGS_UPDATED, { provider, modelName })
 	}
 
-	public capturePromptEnhanced(taskId?: string): void {
-		this.captureEvent(TelemetryEventName.PROMPT_ENHANCED, { ...(taskId && { taskId }) })
+	public captureSubscriptionStateChanged(state: string, provider: string): void {
+		this.captureEvent(TelemetryEventName.SUBSCRIPTION_STATE_CHANGED, { state, provider })
 	}
 
-	public captureSchemaValidationError({ schemaName, error }: { schemaName: string; error: ZodError }): void {
-		// https://zod.dev/ERROR_HANDLING?id=formatting-errors
-		this.captureEvent(TelemetryEventName.SCHEMA_VALIDATION_ERROR, { schemaName, error: error.format() })
+	public captureMarketplaceInstallStarted(packageId: string): void {
+		this.captureEvent(TelemetryEventName.MARKETPLACE_INSTALL_STARTED, { packageId })
 	}
 
-	public captureDiffApplicationError(taskId: string, consecutiveMistakeCount: number): void {
-		this.captureEvent(TelemetryEventName.DIFF_APPLICATION_ERROR, { taskId, consecutiveMistakeCount })
+	public captureMarketplaceInstallCompleted(packageId: string): void {
+		this.captureEvent(TelemetryEventName.MARKETPLACE_INSTALL_COMPLETED, { packageId })
 	}
 
-	public captureShellIntegrationError(taskId: string): void {
-		this.captureEvent(TelemetryEventName.SHELL_INTEGRATION_ERROR, { taskId })
+	public captureMarketplaceInstallError(packageId: string, error: string): void {
+		this.captureEvent(TelemetryEventName.MARKETPLACE_INSTALL_ERROR, { packageId, error })
 	}
 
-	public captureConsecutiveMistakeError(taskId: string): void {
-		this.captureEvent(TelemetryEventName.CONSECUTIVE_MISTAKE_ERROR, { taskId })
+	public captureMarketplaceLoaded(): void {
+		this.captureEvent(TelemetryEventName.MARKETPLACE_LOADED, {})
 	}
 
-	/**
-	 * Captures a marketplace item installation event
-	 * @param itemId The unique identifier of the marketplace item
-	 * @param itemType The type of item (mode or mcp)
-	 * @param itemName The human-readable name of the item
-	 * @param target The installation target (project or global)
-	 * @param properties Additional properties like hasParameters, installationMethod
-	 */
-	public captureMarketplaceItemInstalled(
-		itemId: string,
-		itemType: string,
-		itemName: string,
-		target: string,
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		properties?: Record<string, any>,
-	): void {
-		this.captureEvent(TelemetryEventName.MARKETPLACE_ITEM_INSTALLED, {
-			itemId,
-			itemType,
-			itemName,
-			target,
-			... (properties || {}),
-		})
+	public captureMarketplaceLoadingError(error: string): void {
+		this.captureEvent(TelemetryEventName.MARKETPLACE_LOADING_ERROR, { error })
 	}
 
-	/**
-	 * Captures a marketplace item removal event
-	 * @param itemId The unique identifier of the marketplace item
-	 * @param itemType The type of item (mode or mcp)
-	 * @param itemName The human-readable name of the item
-	 * @param target The removal target (project or global)
-	 */
-	public captureMarketplaceItemRemoved(itemId: string, itemType: string, itemName: string, target: string): void {
-		this.captureEvent(TelemetryEventName.MARKETPLACE_ITEM_REMOVED, {
-			itemId,
-			itemType,
-			itemName,
-			target,
-		})
+	public captureMarketplaceRefreshed(): void {
+		this.captureEvent(TelemetryEventName.MARKETPLACE_REFRESHED, {})
 	}
 
-	/**
-	 * Captures a title button click event
-	 * @param button The button that was clicked
-	 */
-	public captureTitleButtonClicked(button: string): void {
-		this.captureEvent(TelemetryEventName.TITLE_BUTTON_CLICKED, { button })
+	public captureMarketplaceRefreshError(error: string): void {
+		this.captureEvent(TelemetryEventName.MARKETPLACE_REFRESH_ERROR, { error })
 	}
 
-	/**
-	 * Checks if telemetry is currently enabled
-	 * @returns Whether telemetry is enabled
-	 */
-	public isTelemetryEnabled(): boolean {
-		return this.isReady && this.clients.some((client) => client.isTelemetryEnabled())
+	public captureMarketplaceUninstall(packageId: string): void {
+		this.captureEvent(TelemetryEventName.MARKETPLACE_UNINSTALL, { packageId })
 	}
 
-	public async shutdown(): Promise<void> {
-		if (!this.isReady) {
-			return
-		}
-
-		this.clients.forEach((client) => client.shutdown())
+	public captureMarketplaceUninstallError(packageId: string, error: string): void {
+		this.captureEvent(TelemetryEventName.MARKETPLACE_UNINSTALL_ERROR, { packageId, error })
 	}
 
-	private static _instance: TelemetryService | null = null
-
-	static createInstance(clients: TelemetryClient[] = []) {
-		if (this._instance) {
-			throw new Error("TelemetryService instance already created")
-		}
-
-		this._instance = new TelemetryService(clients)
-		return this._instance
+	public captureTaskPanelVisibilityChanged(visible: boolean): void {
+		this.captureEvent(TelemetryEventName.TASK_PANEL_VISIBILITY_CHANGED, { visible })
 	}
 
-	static get instance() {
-		if (!this._instance) {
-			throw new Error("TelemetryService not initialized")
-		}
-
-		return this._instance
+	public captureTaskPanelVisibilityTransitionError(error: string): void {
+		this.captureEvent(TelemetryEventName.TASK_PANEL_VISIBILITY_TRANSITION_ERROR, { error })
 	}
 
-	static hasInstance(): boolean {
-		return this._instance !== null
+	public captureAuthLoaded(): void {
+		this.captureEvent(TelemetryEventName.AUTH_LOADED, {})
+	}
+
+	public captureAuthSubmitted(): void {
+		this.captureEvent(TelemetryEventName.AUTH_SUBMITTED, {})
+	}
+
+	public captureAuthVerified(): void {
+		this.captureEvent(TelemetryEventName.AUTH_VERIFIED, {})
+	}
+
+	public captureAuthFailed(error: string): void {
+		this.captureEvent(TelemetryEventName.AUTH_FAILED, { error })
+	}
+
+	public captureAuthCleared(): void {
+		this.captureEvent(TelemetryEventName.AUTH_CLEARED, {})
+	}
+
+	public captureAuthRequested(): void {
+		this.captureEvent(TelemetryEventName.AUTH_REQUESTED, {})
+	}
+
+	public captureAuthValidated(): void {
+		this.captureEvent(TelemetryEventName.AUTH_VALIDATED, {})
+	}
+
+	public captureAuthLoadedFromStorage(): void {
+		this.captureEvent(TelemetryEventName.AUTH_LOADED_FROM_STORAGE, {})
+	}
+
+	public captureAuthLoadError(error: string): void {
+		this.captureEvent(TelemetryEventName.AUTH_LOAD_ERROR, { error })
+	}
+
+	public captureLlamaInstallStarted(platform: string, arch: string): void {
+		this.captureEvent(TelemetryEventName.LLAMA_INSTALL_STARTED, { platform, arch })
+	}
+
+	public captureLlamaInstallCompleted(platform: string, arch: string, durationMs: number): void {
+		this.captureEvent(TelemetryEventName.LLAMA_INSTALL_COMPLETED, { platform, arch, durationMs })
+	}
+
+	public captureLlamaInstallError(platform: string, arch: string, error: string): void {
+		this.captureEvent(TelemetryEventName.LLAMA_INSTALL_ERROR, { platform, arch, error })
+	}
+
+	public captureLlamaIndexUpdated(numDocuments: number): void {
+		this.captureEvent(TelemetryEventName.LLAMA_INDEX_UPDATED, { numDocuments })
+	}
+
+	public captureMcpServerProvisioned(mcpType: string): void {
+		this.captureEvent(TelemetryEventName.MCP_SERVER_PROVISIONED, { mcpType })
+	}
+
+	public captureMcpServerProvisioningError(mcpType: string, error: string): void {
+		this.captureEvent(TelemetryEventName.MCP_SERVER_PROVISIONING_ERROR, { mcpType, error })
+	}
+
+	public captureMcpToolUsed(mcpType: string, tool: string): void {
+		this.captureEvent(TelemetryEventName.MCP_TOOL_USED, { mcpType, tool })
+	}
+
+	public captureMcpToolError(mcpType: string, tool: string, error: string): void {
+		this.captureEvent(TelemetryEventName.MCP_TOOL_ERROR, { mcpType, tool, error })
+	}
+
+	public captureMcpResourceAccessed(mcpType: string, resourceType: string): void {
+		this.captureEvent(TelemetryEventName.MCP_RESOURCE_ACCESSED, { mcpType, resourceType })
+	}
+
+	public captureMcpResourceError(mcpType: string, resourceType: string, error: string): void {
+		this.captureEvent(TelemetryEventName.MCP_RESOURCE_ERROR, { mcpType, resourceType, error })
+	}
+
+	public captureExtensionInstallRecommended(extensionId: string): void {
+		this.captureEvent(TelemetryEventName.EXTENSION_INSTALL_RECOMMENDED, { extensionId })
+	}
+
+	public captureExtensionInstallStarted(extensionId: string): void {
+		this.captureEvent(TelemetryEventName.EXTENSION_INSTALL_STARTED, { extensionId })
+	}
+
+	public captureExtensionInstallCompleted(extensionId: string): void {
+		this.captureEvent(TelemetryEventName.EXTENSION_INSTALL_COMPLETED, { extensionId })
+	}
+
+	public captureExtensionInstallError(extensionId: string, error: string): void {
+		this.captureEvent(TelemetryEventName.EXTENSION_INSTALL_ERROR, { extensionId, error })
+	}
+
+	public captureEmbeddedViewerOpened(viewType: string): void {
+		this.captureEvent(TelemetryEventName.EMBEDDED_VIEWER_OPENED, { viewType })
+	}
+
+	public captureEmbeddedViewerError(viewType: string, error: string): void {
+		this.captureEvent(TelemetryEventName.EMBEDDED_VIEWER_ERROR, { viewType, error })
+	}
+
+	public captureMcpDirectoryShared(mcpType: string, paths: string[]): void {
+		this.captureEvent(TelemetryEventName.MCP_DIRECTORY_SHARED, { mcpType, paths })
+	}
+
+	public captureMcpDirectoryShareError(mcpType: string, paths: string[], error: string): void {
+		this.captureEvent(TelemetryEventName.MCP_DIRECTORY_SHARE_ERROR, { mcpType, paths, error })
+	}
+
+	public captureMcpFileUploadStarted(mcpType: string, filePath: string): void {
+		this.captureEvent(TelemetryEventName.MCP_FILE_UPLOAD_STARTED, { mcpType, filePath })
+	}
+
+	public captureMcpFileUploadCompleted(mcpType: string, filePath: string): void {
+		this.captureEvent(TelemetryEventName.MCP_FILE_UPLOAD_COMPLETED, { mcpType, filePath })
+	}
+
+	public captureMcpFileUploadError(mcpType: string, filePath: string, error: string): void {
+		this.captureEvent(TelemetryEventName.MCP_FILE_UPLOAD_ERROR, { mcpType, filePath, error })
+	}
+
+	public captureHumanRelayResponseReceived(status: string): void {
+		this.captureEvent(TelemetryEventName.HUMAN_RELAY_RESPONSE_RECEIVED, { status })
+	}
+
+	public captureHumanRelayError(error: string): void {
+		this.captureEvent(TelemetryEventName.HUMAN_RELAY_ERROR, { error })
+	}
+
+	public onEvent(callback: (event: RooCodeTelemetryEvent) => void) {
+		this.eventEmitter.on("telemetry", callback)
+	}
+
+	public removeEventListener(callback: (event: RooCodeTelemetryEvent) => void) {
+		this.eventEmitter.removeListener("telemetry", callback)
+	}
+
+	public isTrackingEnabled() {
+		return this.trackEvents
+	}
+
+	private shouldCaptureEvent() {
+		const random = Math.random() * 100
+		return random <= this.captureRateSamplingPercent
 	}
 }

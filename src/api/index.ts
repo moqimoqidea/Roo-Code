@@ -3,10 +3,12 @@ import { Anthropic } from "@anthropic-ai/sdk"
 import type { ProviderSettings, ModelInfo } from "@roo-code/types"
 
 import { ApiStream } from "./transform/stream"
+import { modelSupportsNativeToolCalling } from "./tool-calls/model-detection"
 
 import {
 	GlamaHandler,
 	AnthropicHandler,
+	AnthropicEnhancedHandler,
 	AwsBedrockHandler,
 	OpenRouterHandler,
 	VertexHandler,
@@ -62,8 +64,13 @@ export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
 	const { apiProvider, ...options } = configuration
 
 	switch (apiProvider) {
-		case "anthropic":
-			return new AnthropicHandler(options)
+		case "anthropic": {
+			// Use enhanced handler for models that support native tool calling
+			const useNative = modelSupportsNativeToolCalling(apiProvider, options.apiModelId)
+			return useNative
+				? new AnthropicEnhancedHandler(options)
+				: new AnthropicHandler(options)
+		}
 		case "glama":
 			return new GlamaHandler(options)
 		case "openrouter":
@@ -75,12 +82,20 @@ export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
 				? new AnthropicVertexHandler(options)
 				: new VertexHandler(options)
 		case "openai":
+			// In the future, we could add OpenAI enhanced handler here
+			// if (modelSupportsNativeToolCalling(apiProvider, options.apiModelId)) {
+			//   return new OpenAiEnhancedHandler(options)
+			// }
 			return new OpenAiHandler(options)
 		case "ollama":
 			return new OllamaHandler(options)
 		case "lmstudio":
 			return new LmStudioHandler(options)
 		case "gemini":
+			// In the future, we could add Gemini enhanced handler here
+			// if (modelSupportsNativeToolCalling(apiProvider, options.apiModelId)) {
+			//   return new GeminiEnhancedHandler(options)
+			// }
 			return new GeminiHandler(options)
 		case "openai-native":
 			return new OpenAiNativeHandler(options)

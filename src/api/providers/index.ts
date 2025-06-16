@@ -1,5 +1,6 @@
 export { AnthropicVertexHandler } from "./anthropic-vertex"
 export { AnthropicHandler } from "./anthropic"
+export { AnthropicEnhancedHandler } from "./anthropic-enhanced"
 export { AwsBedrockHandler } from "./bedrock"
 export { ChutesHandler } from "./chutes"
 export { DeepSeekHandler } from "./deepseek"

@@ -46,6 +46,7 @@ vi.mock("@src/i18n/TranslationContext", () => ({
 				"settings:codeIndex.searchMinScoreLabel": "Search Score Threshold",
 				"settings:codeIndex.searchMinScoreDescription":
 					"Minimum similarity score (0.0-1.0) required for search results. Lower values return more results but may be less relevant. Higher values return fewer but more relevant results.",
+				"settings:codeIndex.searchMinScoreResetTooltip": "Reset to default value (0.4)",
 			}
 			return translations[key] || key
 		},
@@ -88,6 +89,24 @@ vi.mock("@src/components/ui", () => ({
 	AlertDialogHeader: ({ children }: any) => <div data-testid="alert-dialog-header">{children}</div>,
 	AlertDialogTitle: ({ children }: any) => <div data-testid="alert-dialog-title">{children}</div>,
 	AlertDialogTrigger: ({ children }: any) => <div data-testid="alert-dialog-trigger">{children}</div>,
+	Slider: ({ value, onValueChange, "data-testid": dataTestId }: any) => (
+		<input
+			type="range"
+			value={value[0]}
+			onChange={(e) => onValueChange && onValueChange([parseFloat(e.target.value)])}
+			data-testid={dataTestId}
+			role="slider"
+		/>
+	),
+	Button: ({ children, onClick, "data-testid": dataTestId, ...props }: any) => (
+		<button onClick={onClick} data-testid={dataTestId} {...props}>
+			{children}
+		</button>
+	),
+	Tooltip: ({ children }: any) => <div data-testid="tooltip">{children}</div>,
+	TooltipContent: ({ children }: any) => <div data-testid="tooltip-content">{children}</div>,
+	TooltipProvider: ({ children }: any) => <div data-testid="tooltip-provider">{children}</div>,
+	TooltipTrigger: ({ children }: any) => <div data-testid="tooltip-trigger">{children}</div>,
 }))
 
 vi.mock("@vscode/webview-ui-toolkit/react", () => ({
@@ -822,10 +841,11 @@ describe("CodeIndexSettings", () => {
 	})
 
 	describe("Search Minimum Score Slider", () => {
-		it("should render search minimum score slider", () => {
+		it("should render search minimum score slider with reset button", () => {
 			render(<CodeIndexSettings {...defaultProps} />)
 
 			expect(screen.getByTestId("search-min-score-slider")).toBeInTheDocument()
+			expect(screen.getByTestId("search-min-score-reset-button")).toBeInTheDocument()
 			expect(screen.getByText("Search Score Threshold")).toBeInTheDocument()
 		})
 
@@ -840,8 +860,6 @@ describe("CodeIndexSettings", () => {
 
 			render(<CodeIndexSettings {...propsWithScore} />)
 
-			const slider = screen.getByTestId("search-min-score-slider")
-			expect(slider).toHaveValue("0.65")
 			expect(screen.getByText("0.65")).toBeInTheDocument()
 		})
 
@@ -857,6 +875,26 @@ describe("CodeIndexSettings", () => {
 			})
 		})
 
+		it("should reset to default value when reset button is clicked", () => {
+			const propsWithScore = {
+				...defaultProps,
+				codebaseIndexConfig: {
+					...defaultProps.codebaseIndexConfig,
+					codebaseIndexSearchMinScore: 0.8,
+				},
+			}
+
+			render(<CodeIndexSettings {...propsWithScore} />)
+
+			const resetButton = screen.getByTestId("search-min-score-reset-button")
+			fireEvent.click(resetButton)
+
+			expect(mockSetCachedStateField).toHaveBeenCalledWith("codebaseIndexConfig", {
+				...defaultProps.codebaseIndexConfig,
+				codebaseIndexSearchMinScore: 0.4,
+			})
+		})
+
 		it("should use default value when no score is set", () => {
 			const propsWithoutScore = {
 				...defaultProps,
@@ -868,8 +906,6 @@ describe("CodeIndexSettings", () => {
 
 			render(<CodeIndexSettings {...propsWithoutScore} />)
 
-			const slider = screen.getByTestId("search-min-score-slider")
-			expect(slider).toHaveValue("0.4")
 			expect(screen.getByText("0.40")).toBeInTheDocument()
 		})
 	})

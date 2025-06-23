@@ -27,6 +27,12 @@ import {
 	AlertDialogHeader,
 	AlertDialogTitle,
 	AlertDialogTrigger,
+	Slider,
+	Button,
+	Tooltip,
+	TooltipContent,
+	TooltipProvider,
+	TooltipTrigger,
 } from "@src/components/ui"
 
 import { SetCachedStateField } from "./types"
@@ -449,42 +455,50 @@ export const CodeIndexSettings: React.FC<CodeIndexSettingsProps> = ({
 						</div>
 					</div>
 
-					<div className="flex flex-col gap-3">
-						<div className="flex items-center gap-4 font-bold">
-							<div>{t("settings:codeIndex.searchMinScoreLabel")}</div>
+					<div>
+						<span className="block font-medium mb-1">{t("settings:codeIndex.searchMinScoreLabel")}</span>
+						<div className="flex items-center gap-2">
+							<Slider
+								min={0}
+								max={1}
+								step={0.05}
+								value={[codebaseIndexConfig.codebaseIndexSearchMinScore || 0.4]}
+								onValueChange={([value]) =>
+									setCachedStateField("codebaseIndexConfig", {
+										...codebaseIndexConfig,
+										codebaseIndexSearchMinScore: value,
+									})
+								}
+								data-testid="search-min-score-slider"
+							/>
+							<span className="w-20">
+								{(codebaseIndexConfig.codebaseIndexSearchMinScore || 0.4).toFixed(2)}
+							</span>
+							<TooltipProvider>
+								<Tooltip>
+									<TooltipTrigger asChild>
+										<Button
+											variant="ghost"
+											size="sm"
+											onClick={() =>
+												setCachedStateField("codebaseIndexConfig", {
+													...codebaseIndexConfig,
+													codebaseIndexSearchMinScore: 0.4,
+												})
+											}
+											className="h-8 w-8 p-0"
+											data-testid="search-min-score-reset-button">
+											<span className="codicon codicon-debug-restart w-4 h-4" />
+										</Button>
+									</TooltipTrigger>
+									<TooltipContent>
+										<p>{t("settings:codeIndex.searchMinScoreResetTooltip")}</p>
+									</TooltipContent>
+								</Tooltip>
+							</TooltipProvider>
 						</div>
-						<div className="flex flex-col gap-3">
-							<div className="flex items-center gap-3">
-								<span className="text-xs text-vscode-descriptionForeground min-w-[30px]">0.0</span>
-								<input
-									type="range"
-									min="0"
-									max="1"
-									step="0.05"
-									value={codebaseIndexConfig.codebaseIndexSearchMinScore || 0.4}
-									onChange={(e) => {
-										const value = parseFloat(e.target.value)
-										setCachedStateField("codebaseIndexConfig", {
-											...codebaseIndexConfig,
-											codebaseIndexSearchMinScore: value,
-										})
-									}}
-									className="flex-1 h-2 bg-vscode-input-background rounded-lg appearance-none cursor-pointer slider"
-									data-testid="search-min-score-slider"
-									style={{
-										background: `linear-gradient(to right, var(--vscode-progressBar-background) 0%, var(--vscode-progressBar-background) ${(codebaseIndexConfig.codebaseIndexSearchMinScore || 0.4) * 100}%, var(--vscode-input-background) ${(codebaseIndexConfig.codebaseIndexSearchMinScore || 0.4) * 100}%, var(--vscode-input-background) 100%)`,
-									}}
-								/>
-								<span className="text-xs text-vscode-descriptionForeground min-w-[30px]">1.0</span>
-							</div>
-							<div className="text-center">
-								<span className="text-sm text-vscode-foreground font-medium">
-									{(codebaseIndexConfig.codebaseIndexSearchMinScore || 0.4).toFixed(2)}
-								</span>
-							</div>
-							<p className="text-vscode-descriptionForeground text-sm mt-1">
-								{t("settings:codeIndex.searchMinScoreDescription")}
-							</p>
+						<div className="text-vscode-descriptionForeground text-sm mt-1">
+							{t("settings:codeIndex.searchMinScoreDescription")}
 						</div>
 					</div>
 

@@ -43,6 +43,9 @@ vi.mock("@src/i18n/TranslationContext", () => ({
 				"settings:codeIndex.clearDataDialog.description": "This will remove all indexed data",
 				"settings:codeIndex.clearDataDialog.cancelButton": "Cancel",
 				"settings:codeIndex.clearDataDialog.confirmButton": "Confirm",
+				"settings:codeIndex.searchMinScoreLabel": "Search Score Threshold",
+				"settings:codeIndex.searchMinScoreDescription":
+					"Minimum similarity score (0.0-1.0) required for search results. Lower values return more results but may be less relevant. Higher values return fewer but more relevant results.",
 			}
 			return translations[key] || key
 		},
@@ -158,6 +161,7 @@ describe("CodeIndexSettings", () => {
 			codebaseIndexEmbedderProvider: "openai" as const,
 			codebaseIndexEmbedderModelId: "text-embedding-3-small",
 			codebaseIndexQdrantUrl: "http://localhost:6333",
+			codebaseIndexSearchMinScore: 0.4,
 		},
 		apiConfiguration: {
 			codeIndexOpenAiKey: "",
@@ -204,7 +208,7 @@ describe("CodeIndexSettings", () => {
 
 			expect(screen.getByText("Base URL")).toBeInTheDocument()
 			expect(screen.getByText("API Key")).toBeInTheDocument()
-			expect(screen.getAllByTestId("vscode-textfield")).toHaveLength(6) // Base URL, API Key, Embedding Dimension, Model ID, Qdrant URL, Qdrant Key
+			expect(screen.getAllByTestId("vscode-textfield")).toHaveLength(6) // Base URL, API Key, Embedding Dimension, Model ID, Qdrant URL, Qdrant Key (Search Min Score is now a slider)
 		})
 
 		it("should hide OpenAI Compatible fields when different provider is selected", () => {
@@ -814,6 +818,59 @@ describe("CodeIndexSettings", () => {
 
 			// Check that the status indicator shows "Indexing"
 			expect(screen.getByText(/Indexing/)).toBeInTheDocument()
+		})
+	})
+
+	describe("Search Minimum Score Slider", () => {
+		it("should render search minimum score slider", () => {
+			render(<CodeIndexSettings {...defaultProps} />)
+
+			expect(screen.getByTestId("search-min-score-slider")).toBeInTheDocument()
+			expect(screen.getByText("Search Score Threshold")).toBeInTheDocument()
+		})
+
+		it("should display current search minimum score value", () => {
+			const propsWithScore = {
+				...defaultProps,
+				codebaseIndexConfig: {
+					...defaultProps.codebaseIndexConfig,
+					codebaseIndexSearchMinScore: 0.65,
+				},
+			}
+
+			render(<CodeIndexSettings {...propsWithScore} />)
+
+			const slider = screen.getByTestId("search-min-score-slider")
+			expect(slider).toHaveValue("0.65")
+			expect(screen.getByText("0.65")).toBeInTheDocument()
+		})
+
+		it("should call setCachedStateField when slider value changes", () => {
+			render(<CodeIndexSettings {...defaultProps} />)
+
+			const slider = screen.getByTestId("search-min-score-slider")
+			fireEvent.change(slider, { target: { value: "0.8" } })
+
+			expect(mockSetCachedStateField).toHaveBeenCalledWith("codebaseIndexConfig", {
+				...defaultProps.codebaseIndexConfig,
+				codebaseIndexSearchMinScore: 0.8,
+			})
+		})
+
+		it("should use default value when no score is set", () => {
+			const propsWithoutScore = {
+				...defaultProps,
+				codebaseIndexConfig: {
+					...defaultProps.codebaseIndexConfig,
+					codebaseIndexSearchMinScore: undefined,
+				},
+			}
+
+			render(<CodeIndexSettings {...propsWithoutScore} />)
+
+			const slider = screen.getByTestId("search-min-score-slider")
+			expect(slider).toHaveValue("0.4")
+			expect(screen.getByText("0.40")).toBeInTheDocument()
 		})
 	})
 

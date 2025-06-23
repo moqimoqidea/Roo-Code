@@ -18,6 +18,7 @@ export class CodeIndexConfigManager {
 	private openAiCompatibleOptions?: { baseUrl: string; apiKey: string; modelDimension?: number }
 	private qdrantUrl?: string = "http://localhost:6333"
 	private qdrantApiKey?: string
+	private searchMinScore?: number
 
 	constructor(private readonly contextProxy: ContextProxy) {
 		// Initialize with current configuration to avoid false restart triggers
@@ -33,7 +34,6 @@ export class CodeIndexConfigManager {
 		const codebaseIndexConfig = this.contextProxy?.getGlobalState("codebaseIndexConfig") ?? {
 			codebaseIndexEnabled: false,
 			codebaseIndexQdrantUrl: "http://localhost:6333",
-			codebaseIndexSearchMinScore: 0.4,
 			codebaseIndexEmbedderProvider: "openai",
 			codebaseIndexEmbedderBaseUrl: "",
 			codebaseIndexEmbedderModelId: "",
@@ -45,6 +45,7 @@ export class CodeIndexConfigManager {
 			codebaseIndexEmbedderProvider,
 			codebaseIndexEmbedderBaseUrl,
 			codebaseIndexEmbedderModelId,
+			codebaseIndexSearchMinScore,
 		} = codebaseIndexConfig
 
 		const openAiKey = this.contextProxy?.getSecret("codeIndexOpenAiKey") ?? ""
@@ -59,6 +60,7 @@ export class CodeIndexConfigManager {
 		this.isEnabled = codebaseIndexEnabled || false
 		this.qdrantUrl = codebaseIndexQdrantUrl
 		this.qdrantApiKey = qdrantApiKey ?? ""
+		this.searchMinScore = codebaseIndexSearchMinScore
 		this.openAiOptions = { openAiNativeApiKey: openAiKey }
 
 		// Set embedder provider with support for openai-compatible
@@ -335,10 +337,16 @@ export class CodeIndexConfigManager {
 	}
 
 	/**
-	 * Gets the configured minimum search score based on the current model.
-	 * Falls back to the constant SEARCH_MIN_SCORE if no model-specific threshold is found.
+	 * Gets the configured minimum search score based on user setting, model-specific threshold, or fallback.
+	 * Priority: 1) User setting, 2) Model-specific threshold, 3) Default SEARCH_MIN_SCORE constant.
 	 */
 	public get currentSearchMinScore(): number {
+		// First check if user has configured a custom score threshold
+		if (this.searchMinScore !== undefined) {
+			return this.searchMinScore
+		}
+
+		// Fall back to model-specific threshold
 		const currentModelId = this.modelId ?? getDefaultModelId(this.embedderProvider)
 		const modelSpecificThreshold = getModelScoreThreshold(this.embedderProvider, currentModelId)
 		return modelSpecificThreshold ?? SEARCH_MIN_SCORE

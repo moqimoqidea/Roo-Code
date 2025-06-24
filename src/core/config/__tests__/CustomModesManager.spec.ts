@@ -27,7 +27,14 @@ vi.mock("vscode", () => ({
 	},
 }))
 
-vi.mock("fs/promises")
+vi.mock("fs/promises", () => ({
+	mkdir: vi.fn(),
+	readFile: vi.fn(),
+	writeFile: vi.fn(),
+	stat: vi.fn(),
+	readdir: vi.fn(),
+	rm: vi.fn(),
+}))
 
 vi.mock("../../../utils/fs")
 vi.mock("../../../utils/path")
@@ -65,6 +72,10 @@ describe("CustomModesManager", () => {
 			return path === mockSettingsPath || path === mockRoomodes
 		})
 		;(fs.mkdir as Mock).mockResolvedValue(undefined)
+		;(fs.writeFile as Mock).mockResolvedValue(undefined)
+		;(fs.stat as Mock).mockResolvedValue({ isDirectory: () => true })
+		;(fs.readdir as Mock).mockResolvedValue([])
+		;(fs.rm as Mock).mockResolvedValue(undefined)
 		;(fs.readFile as Mock).mockImplementation(async (path: string) => {
 			if (path === mockSettingsPath) {
 				return yaml.stringify({ customModes: [] })
@@ -785,6 +796,337 @@ describe("CustomModesManager", () => {
 					}),
 				],
 			})
+		})
+	})
+
+	describe("checkRulesDirectoryHasContent", () => {
+		it("should return false when no workspace is available", async () => {
+			;(getWorkspacePath as Mock).mockReturnValue(null)
+
+			const result = await manager.checkRulesDirectoryHasContent("test-mode")
+
+			expect(result).toBe(false)
+		})
+
+		it("should return false when mode is not in .roomodes file", async () => {
+			const roomodesContent = { customModes: [{ slug: "other-mode", name: "Other Mode" }] }
+			;(fileExistsAtPath as Mock).mockImplementation(async (path: string) => {
+				return path === mockRoomodes
+			})
+			;(fs.readFile as Mock).mockImplementation(async (path: string) => {
+				if (path === mockRoomodes) {
+					return yaml.stringify(roomodesContent)
+				}
+				throw new Error("File not found")
+			})
+
+			const result = await manager.checkRulesDirectoryHasContent("test-mode")
+
+			expect(result).toBe(false)
+		})
+
+		it("should return false when .roomodes doesn't exist and mode is not a custom mode", async () => {
+			;(fileExistsAtPath as Mock).mockImplementation(async (path: string) => {
+				return path === mockSettingsPath
+			})
+			;(fs.readFile as Mock).mockImplementation(async (path: string) => {
+				if (path === mockSettingsPath) {
+					return yaml.stringify({ customModes: [] })
+				}
+				throw new Error("File not found")
+			})
+
+			const result = await manager.checkRulesDirectoryHasContent("test-mode")
+
+			expect(result).toBe(false)
+		})
+
+		it("should return false when rules directory doesn't exist", async () => {
+			const roomodesContent = { customModes: [{ slug: "test-mode", name: "Test Mode" }] }
+			;(fileExistsAtPath as Mock).mockImplementation(async (path: string) => {
+				return path === mockRoomodes
+			})
+			;(fs.readFile as Mock).mockImplementation(async (path: string) => {
+				if (path === mockRoomodes) {
+					return yaml.stringify(roomodesContent)
+				}
+				throw new Error("File not found")
+			})
+			;(fs.stat as Mock).mockRejectedValue(new Error("Directory not found"))
+
+			const result = await manager.checkRulesDirectoryHasContent("test-mode")
+
+			expect(result).toBe(false)
+		})
+
+		it("should return false when rules directory is empty", async () => {
+			const roomodesContent = { customModes: [{ slug: "test-mode", name: "Test Mode" }] }
+			;(fileExistsAtPath as Mock).mockImplementation(async (path: string) => {
+				return path === mockRoomodes
+			})
+			;(fs.readFile as Mock).mockImplementation(async (path: string) => {
+				if (path === mockRoomodes) {
+					return yaml.stringify(roomodesContent)
+				}
+				throw new Error("File not found")
+			})
+			;(fs.stat as Mock).mockResolvedValue({ isDirectory: () => true })
+			;(fs.readdir as Mock).mockResolvedValue([])
+
+			const result = await manager.checkRulesDirectoryHasContent("test-mode")
+
+			expect(result).toBe(false)
+		})
+
+		it("should return true when rules directory has content files", async () => {
+			const roomodesContent = { customModes: [{ slug: "test-mode", name: "Test Mode" }] }
+			;(fileExistsAtPath as Mock).mockImplementation(async (path: string) => {
+				return path === mockRoomodes
+			})
+			;(fs.readFile as Mock).mockImplementation(async (path: string) => {
+				if (path === mockRoomodes) {
+					return yaml.stringify(roomodesContent)
+				}
+				if (path.includes("rules-test-mode")) {
+					return "Some rule content"
+				}
+				throw new Error("File not found")
+			})
+			;(fs.stat as Mock).mockResolvedValue({ isDirectory: () => true })
+			;(fs.readdir as Mock).mockResolvedValue([
+				{ name: "rule1.md", isFile: () => true, parentPath: "/mock/workspace/.roo/rules-test-mode" },
+			])
+
+			const result = await manager.checkRulesDirectoryHasContent("test-mode")
+
+			expect(result).toBe(true)
+		})
+
+		it("should work with global custom modes when .roomodes doesn't exist", async () => {
+			const settingsContent = {
+				customModes: [{ slug: "test-mode", name: "Test Mode", groups: ["read"], roleDefinition: "Test Role" }],
+			}
+
+			// Create a fresh manager instance to avoid cache issues
+			const freshManager = new CustomModesManager(mockContext, mockOnUpdate)
+
+			;(fileExistsAtPath as Mock).mockImplementation(async (path: string) => {
+				return path === mockSettingsPath // .roomodes doesn't exist
+			})
+			;(fs.readFile as Mock).mockImplementation(async (path: string) => {
+				if (path === mockSettingsPath) {
+					return yaml.stringify(settingsContent)
+				}
+				if (path.includes("rules-test-mode")) {
+					return "Some rule content"
+				}
+				throw new Error("File not found")
+			})
+			;(fs.stat as Mock).mockResolvedValue({ isDirectory: () => true })
+			;(fs.readdir as Mock).mockResolvedValue([
+				{ name: "rule1.md", isFile: () => true, parentPath: "/mock/workspace/.roo/rules-test-mode" },
+			])
+
+			const result = await freshManager.checkRulesDirectoryHasContent("test-mode")
+
+			expect(result).toBe(true)
+		})
+	})
+
+	describe("consolidateRulesForMode", () => {
+		it("should return error when no workspace is available", async () => {
+			// Create a fresh manager instance to avoid cache issues
+			const freshManager = new CustomModesManager(mockContext, mockOnUpdate)
+
+			// Mock no workspace folders
+			;(vscode.workspace as any).workspaceFolders = []
+			;(getWorkspacePath as Mock).mockReturnValue(null)
+			;(fileExistsAtPath as Mock).mockResolvedValue(false)
+			;(fs.readFile as Mock).mockImplementation(async (path: string) => {
+				if (path === mockSettingsPath) {
+					return yaml.stringify({ customModes: [] })
+				}
+				throw new Error("File not found")
+			})
+
+			const result = await freshManager.consolidateRulesForMode("test-mode")
+
+			expect(result.success).toBe(false)
+			expect(result.error).toBe("No workspace found")
+		})
+
+		it("should return error when mode is not found", async () => {
+			;(fs.readFile as Mock).mockImplementation(async (path: string) => {
+				if (path === mockSettingsPath) {
+					return yaml.stringify({ customModes: [] })
+				}
+				throw new Error("File not found")
+			})
+			;(fileExistsAtPath as Mock).mockImplementation(async (path: string) => {
+				return path === mockSettingsPath
+			})
+
+			const result = await manager.consolidateRulesForMode("test-mode")
+
+			expect(result.success).toBe(false)
+			expect(result.error).toBe("Mode not found")
+		})
+
+		it("should return error when rules directory doesn't exist", async () => {
+			const roomodesContent = { customModes: [{ slug: "test-mode", name: "Test Mode" }] }
+			;(fileExistsAtPath as Mock).mockImplementation(async (path: string) => {
+				return path === mockRoomodes
+			})
+			;(fs.readFile as Mock).mockImplementation(async (path: string) => {
+				if (path === mockRoomodes) {
+					return yaml.stringify(roomodesContent)
+				}
+				throw new Error("File not found")
+			})
+			;(fs.stat as Mock).mockRejectedValue(new Error("Directory not found"))
+
+			const result = await manager.consolidateRulesForMode("test-mode")
+
+			expect(result.success).toBe(false)
+			expect(result.error).toBe("Rules directory not found")
+		})
+
+		it("should return error when no rule files are found", async () => {
+			const roomodesContent = { customModes: [{ slug: "test-mode", name: "Test Mode" }] }
+			;(fileExistsAtPath as Mock).mockImplementation(async (path: string) => {
+				return path === mockRoomodes
+			})
+			;(fs.readFile as Mock).mockImplementation(async (path: string) => {
+				if (path === mockRoomodes) {
+					return yaml.stringify(roomodesContent)
+				}
+				throw new Error("File not found")
+			})
+			;(fs.stat as Mock).mockResolvedValue({ isDirectory: () => true })
+			;(fs.readdir as Mock).mockResolvedValue([])
+
+			const result = await manager.consolidateRulesForMode("test-mode")
+
+			expect(result.success).toBe(false)
+			expect(result.error).toBe("No rule files found in the directory")
+		})
+
+		it("should successfully consolidate rules for a custom mode in .roomodes", async () => {
+			const roomodesContent = {
+				customModes: [
+					{
+						slug: "test-mode",
+						name: "Test Mode",
+						roleDefinition: "Test Role",
+						groups: ["read"],
+						customInstructions: "Existing instructions",
+					},
+				],
+			}
+
+			let updatedRoomodesContent = roomodesContent
+
+			;(fileExistsAtPath as Mock).mockImplementation(async (path: string) => {
+				return path === mockRoomodes
+			})
+			;(fs.readFile as Mock).mockImplementation(async (path: string) => {
+				if (path === mockRoomodes) {
+					return yaml.stringify(updatedRoomodesContent)
+				}
+				if (path.includes("rules-test-mode")) {
+					return "New rule content from files"
+				}
+				throw new Error("File not found")
+			})
+			;(fs.writeFile as Mock).mockImplementation(async (path: string, content: string) => {
+				if (path === mockRoomodes) {
+					updatedRoomodesContent = yaml.parse(content)
+				}
+			})
+			;(fs.stat as Mock).mockResolvedValue({ isDirectory: () => true })
+			;(fs.readdir as Mock).mockResolvedValue([
+				{ name: "rule1.md", isFile: () => true, parentPath: "/mock/workspace/.roo/rules-test-mode" },
+			])
+
+			const result = await manager.consolidateRulesForMode("test-mode")
+
+			expect(result.success).toBe(true)
+			expect(fs.writeFile).toHaveBeenCalled()
+			expect(fs.rm).toHaveBeenCalledWith("/mock/workspace/.roo/rules-test-mode", { recursive: true, force: true })
+		})
+
+		it("should successfully consolidate rules for a built-in mode customized in .roomodes", async () => {
+			const roomodesContent = {
+				customModes: [
+					{
+						slug: "code",
+						name: "Custom Code Mode",
+						roleDefinition: "Custom Role",
+						groups: ["read"],
+					},
+				],
+			}
+
+			;(fileExistsAtPath as Mock).mockImplementation(async (path: string) => {
+				return path === mockRoomodes
+			})
+			;(fs.readFile as Mock).mockImplementation(async (path: string) => {
+				if (path === mockRoomodes) {
+					return yaml.stringify(roomodesContent)
+				}
+				if (path.includes("rules-code")) {
+					return "Custom rules for code mode"
+				}
+				if (path === mockSettingsPath) {
+					return yaml.stringify({ customModes: [] })
+				}
+				throw new Error("File not found")
+			})
+			;(fs.stat as Mock).mockResolvedValue({ isDirectory: () => true })
+			;(fs.readdir as Mock).mockResolvedValue([
+				{ name: "rule1.md", isFile: () => true, parentPath: "/mock/workspace/.roo/rules-code" },
+			])
+
+			const result = await manager.consolidateRulesForMode("code")
+
+			expect(result.success).toBe(true)
+			expect(fs.rm).toHaveBeenCalledWith("/mock/workspace/.roo/rules-code", { recursive: true, force: true })
+		})
+
+		it("should handle directory removal errors gracefully", async () => {
+			const roomodesContent = {
+				customModes: [
+					{
+						slug: "test-mode",
+						name: "Test Mode",
+						roleDefinition: "Test Role",
+						groups: ["read"],
+					},
+				],
+			}
+
+			;(fileExistsAtPath as Mock).mockImplementation(async (path: string) => {
+				return path === mockRoomodes
+			})
+			;(fs.readFile as Mock).mockImplementation(async (path: string) => {
+				if (path === mockRoomodes) {
+					return yaml.stringify(roomodesContent)
+				}
+				if (path.includes("rules-test-mode")) {
+					return "Rule content"
+				}
+				throw new Error("File not found")
+			})
+			;(fs.stat as Mock).mockResolvedValue({ isDirectory: () => true })
+			;(fs.readdir as Mock).mockResolvedValue([
+				{ name: "rule1.md", isFile: () => true, parentPath: "/mock/workspace/.roo/rules-test-mode" },
+			])
+			;(fs.rm as Mock).mockRejectedValue(new Error("Permission denied"))
+
+			const result = await manager.consolidateRulesForMode("test-mode")
+
+			// Should still succeed even if directory removal fails
+			expect(result.success).toBe(true)
 		})
 	})
 })

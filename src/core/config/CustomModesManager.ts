@@ -510,6 +510,40 @@ export class CustomModesManager {
 				return false
 			}
 
+			// Check if .roomodes file exists and contains this mode
+			// This ensures we can only consolidate rules for modes that have been customized
+			const roomodesPath = path.join(workspacePath, ROOMODES_FILENAME)
+			try {
+				const roomodesExists = await fileExistsAtPath(roomodesPath)
+				if (roomodesExists) {
+					const roomodesContent = await fs.readFile(roomodesPath, "utf-8")
+					const roomodesData = yaml.parse(roomodesContent)
+					const roomodesModes = roomodesData?.customModes || []
+
+					// Check if this specific mode exists in .roomodes
+					const modeInRoomodes = roomodesModes.find((m: any) => m.slug === slug)
+					if (!modeInRoomodes) {
+						return false // Mode not customized in .roomodes, cannot consolidate
+					}
+				} else {
+					// If no .roomodes file exists, check if it's in global custom modes
+					const allModes = await this.getCustomModes()
+					const mode = allModes.find((m) => m.slug === slug)
+
+					if (!mode) {
+						return false // Not a custom mode, cannot consolidate
+					}
+				}
+			} catch (error) {
+				// If we can't read .roomodes, fall back to checking custom modes
+				const allModes = await this.getCustomModes()
+				const mode = allModes.find((m) => m.slug === slug)
+
+				if (!mode) {
+					return false // Not a custom mode, cannot consolidate
+				}
+			}
+
 			// Check for .roo/rules-{slug}/ directory
 			const modeRulesDir = path.join(workspacePath, ".roo", `rules-${slug}`)
 
@@ -553,10 +587,34 @@ export class CustomModesManager {
 		try {
 			// Get all current modes
 			const allModes = await this.getCustomModes()
-			const mode = allModes.find((m) => m.slug === slug)
+			let mode = allModes.find((m) => m.slug === slug)
 
+			// If mode not found in custom modes, check if it's a built-in mode that has been customized in .roomodes
 			if (!mode) {
-				return { success: false, error: "Mode not found" }
+				const workspacePath = getWorkspacePath()
+				if (!workspacePath) {
+					return { success: false, error: "No workspace found" }
+				}
+
+				const roomodesPath = path.join(workspacePath, ROOMODES_FILENAME)
+				try {
+					const roomodesExists = await fileExistsAtPath(roomodesPath)
+					if (roomodesExists) {
+						const roomodesContent = await fs.readFile(roomodesPath, "utf-8")
+						const roomodesData = yaml.parse(roomodesContent)
+						const roomodesModes = roomodesData?.customModes || []
+
+						// Find the mode in .roomodes
+						mode = roomodesModes.find((m: any) => m.slug === slug)
+						if (!mode) {
+							return { success: false, error: "Mode not found in custom modes or .roomodes" }
+						}
+					} else {
+						return { success: false, error: "Mode not found" }
+					}
+				} catch (error) {
+					return { success: false, error: "Mode not found" }
+				}
 			}
 
 			// Get workspace path

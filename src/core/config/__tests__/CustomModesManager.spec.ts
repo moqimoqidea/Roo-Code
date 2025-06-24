@@ -1052,7 +1052,11 @@ describe("CustomModesManager", () => {
 
 			expect(result.success).toBe(true)
 			expect(fs.writeFile).toHaveBeenCalled()
-			expect(fs.rm).toHaveBeenCalledWith("/mock/workspace/.roo/rules-test-mode", { recursive: true, force: true })
+			// Check that fs.rm was called with the correct path (handling cross-platform path separators)
+			expect(fs.rm).toHaveBeenCalledWith(
+				expect.stringMatching(/[\/\\]mock[\/\\]workspace[\/\\]\.roo[\/\\]rules-test-mode$/),
+				{ recursive: true, force: true },
+			)
 		})
 
 		it("should successfully consolidate rules for a built-in mode customized in .roomodes", async () => {
@@ -1090,7 +1094,11 @@ describe("CustomModesManager", () => {
 			const result = await manager.consolidateRulesForMode("code")
 
 			expect(result.success).toBe(true)
-			expect(fs.rm).toHaveBeenCalledWith("/mock/workspace/.roo/rules-code", { recursive: true, force: true })
+			// Check that fs.rm was called with the correct path (handling cross-platform path separators)
+			expect(fs.rm).toHaveBeenCalledWith(
+				expect.stringMatching(/[\/\\]mock[\/\\]workspace[\/\\]\.roo[\/\\]rules-code$/),
+				{ recursive: true, force: true },
+			)
 		})
 
 		it("should handle directory removal errors gracefully", async () => {

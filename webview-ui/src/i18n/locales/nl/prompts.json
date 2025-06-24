@@ -55,9 +55,13 @@
 		"description": "Dit verplaatst regels van de .roo/rules-{{slug}}/-map naar het veld voor aangepaste instructies. Dit voegt geen functionaliteit toe, maar maakt het gemakkelijker om deze modus op te nemen in globale YAML-regelbestanden en te delen met anderen. De bronmap wordt na consolidatie verwijderd.",
 		"confirmPrompt": "Typ \"bevestigen\" om door te gaan:",
 		"confirmPlaceholder": "bevestigen",
+		"confirmText": "bevestigen",
 		"cancel": "Annuleren",
 		"consolidate": "Regels consolideren",
 		"consolidating": "Consolideren..."
+	},
+	"advanced": {
+		"title": "Geavanceerd"
 	},
 	"globalCustomInstructions": {
 		"title": "Aangepaste instructies voor alle modi",

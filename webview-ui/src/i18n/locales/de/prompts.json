@@ -55,9 +55,13 @@
 		"description": "Dies verschiebt Regeln aus dem Ordner .roo/rules-{{slug}}/ in das Feld für benutzerdefinierte Anweisungen. Dies fügt keine Funktionalität hinzu, sondern erleichtert die Aufnahme dieses Modus in globale YAML-Regeldateien und das Teilen mit anderen. Der Quellordner wird nach der Konsolidierung entfernt.",
 		"confirmPrompt": "Gib \"bestätigen\" ein, um fortzufahren:",
 		"confirmPlaceholder": "bestätigen",
+		"confirmText": "bestätigen",
 		"cancel": "Abbrechen",
 		"consolidate": "Regeln konsolidieren",
 		"consolidating": "Konsolidieren..."
+	},
+	"advanced": {
+		"title": "Erweitert"
 	},
 	"globalCustomInstructions": {
 		"title": "Benutzerdefinierte Anweisungen für alle Modi",

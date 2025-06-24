@@ -1118,7 +1118,7 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 							aria-expanded={isSystemPromptDisclosureOpen}>
 							<span
 								className={`codicon codicon-${isSystemPromptDisclosureOpen ? "chevron-down" : "chevron-right"} mr-1`}></span>
-							<span>Advanced</span>
+							<span>{t("prompts:advanced.title")}</span>
 						</button>
 
 						{isSystemPromptDisclosureOpen && (
@@ -1485,7 +1485,7 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 					<div className="bg-vscode-editor-background border border-vscode-input-border rounded shadow-md p-5 max-w-md mx-4">
 						<h3 className="text-vscode-foreground mb-3">{t("prompts:consolidateRules.title")}</h3>
 						<p className="text-sm text-vscode-descriptionForeground mb-4">
-							{t("prompts:consolidateRules.description", { modeName: consolidateRulesMode })}
+							{t("prompts:consolidateRules.description", { slug: consolidateRulesMode })}
 						</p>
 						<div className="mb-4">
 							<div className="text-sm text-vscode-descriptionForeground mb-2">
@@ -1520,7 +1520,11 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 										slug: consolidateRulesMode,
 									})
 								}}
-								disabled={isConsolidating || consolidateConfirmText.toLowerCase() !== "confirm"}>
+								disabled={
+									isConsolidating ||
+									consolidateConfirmText.toLowerCase() !==
+										t("prompts:consolidateRules.confirmText").toLowerCase()
+								}>
 								{isConsolidating
 									? t("prompts:consolidateRules.consolidating")
 									: t("prompts:consolidateRules.consolidate")}

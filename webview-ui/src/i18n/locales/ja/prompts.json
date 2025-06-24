@@ -55,9 +55,13 @@
 		"description": "これは、.roo/rules-{{slug}}/ フォルダのルールをカスタム指示フィールドに移動します。これにより機能が追加されるわけではなく、このモードをグローバルルールYAMLファイルに含めたり、他のユーザーと共有したりするのが容易になります。統合後、ソースフォルダは削除されます。",
 		"confirmPrompt": "続行するには「confirm」と入力してください：",
 		"confirmPlaceholder": "confirm",
+		"confirmText": "confirm",
 		"cancel": "キャンセル",
 		"consolidate": "ルールを統合",
 		"consolidating": "統合中..."
+	},
+	"advanced": {
+		"title": "詳細設定"
 	},
 	"globalCustomInstructions": {
 		"title": "すべてのモードのカスタム指示",

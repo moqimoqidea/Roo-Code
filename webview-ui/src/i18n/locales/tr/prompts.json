@@ -55,6 +55,7 @@
 		"description": "Bu, kuralları .roo/rules-{{slug}}/ klasöründen özel talimatlar alanına taşır. Bu, işlevsellik eklemez, ancak bu modu genel kurallar YAML dosyalarına dahil etmeyi ve başkalarıyla paylaşmayı kolaylaştırır. Kaynak klasör konsolidasyondan sonra kaldırılacaktır.",
 		"confirmPrompt": "Devam etmek için \"onayla\" yazın:",
 		"confirmPlaceholder": "onayla",
+		"confirmText": "onayla",
 		"cancel": "İptal",
 		"consolidate": "Kuralları Birleştir",
 		"consolidating": "Birleştiriliyor..."
@@ -173,5 +174,8 @@
 		},
 		"deleteMode": "Modu sil"
 	},
-	"allFiles": "tüm dosyalar"
+	"allFiles": "tüm dosyalar",
+	"advanced": {
+		"title": "Gelişmiş"
+	}
 }

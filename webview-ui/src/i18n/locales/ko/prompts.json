@@ -55,9 +55,13 @@
 		"description": "이것은 .roo/rules-{{slug}}/ 폴더의 규칙을 사용자 지정 지침 필드로 이동합니다. 이는 기능을 추가하는 것이 아니라, 이 모드를 전역 규칙 YAML 파일에 포함하고 다른 사람들과 공유하기 쉽게 만듭니다. 통합 후 원본 폴더는 제거됩니다.",
 		"confirmPrompt": "계속하려면 \"confirm\"을 입력하세요:",
 		"confirmPlaceholder": "confirm",
+		"confirmText": "confirm",
 		"cancel": "취소",
 		"consolidate": "규칙 통합",
 		"consolidating": "통합 중..."
+	},
+	"advanced": {
+		"title": "고급"
 	},
 	"globalCustomInstructions": {
 		"title": "모든 모드에 대한 사용자 지정 지침",

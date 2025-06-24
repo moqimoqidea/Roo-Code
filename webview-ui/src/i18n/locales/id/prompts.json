@@ -55,9 +55,13 @@
 		"description": "Ini memindahkan aturan dari folder .roo/rules-{{slug}}/ ke bidang instruksi kustom. Ini tidak menambahkan fungsionalitas, tetapi membuatnya lebih mudah untuk menyertakan mode ini dalam file YAML aturan global dan membagikannya kepada orang lain. Folder sumber akan dihapus setelah konsolidasi.",
 		"confirmPrompt": "Ketik \"confirm\" untuk melanjutkan:",
 		"confirmPlaceholder": "confirm",
+		"confirmText": "confirm",
 		"cancel": "Batal",
 		"consolidate": "Konsolidasi Aturan",
 		"consolidating": "Mengonsolidasi..."
+	},
+	"advanced": {
+		"title": "Lanjutan"
 	},
 	"globalCustomInstructions": {
 		"title": "Instruksi Kustom untuk Semua Mode",

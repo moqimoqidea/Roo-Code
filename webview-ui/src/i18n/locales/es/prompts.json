@@ -55,9 +55,13 @@
 		"description": "Esto mueve las reglas de la carpeta .roo/rules-{{slug}}/ al campo de instrucciones personalizadas. Esto no añade funcionalidad, sino que facilita la inclusión de este modo en los archivos YAML de reglas globales y su compartición con otros. La carpeta de origen se eliminará después de la consolidación.",
 		"confirmPrompt": "Escribe \"confirmar\" para continuar:",
 		"confirmPlaceholder": "confirmar",
+		"confirmText": "confirmar",
 		"cancel": "Cancelar",
 		"consolidate": "Consolidar reglas",
 		"consolidating": "Consolidando..."
+	},
+	"advanced": {
+		"title": "Avanzado"
 	},
 	"globalCustomInstructions": {
 		"title": "Instrucciones personalizadas para todos los modos",

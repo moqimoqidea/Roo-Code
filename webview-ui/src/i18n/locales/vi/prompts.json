@@ -55,6 +55,7 @@
 		"description": "Thao tác này di chuyển các quy tắc từ thư mục .roo/rules-{{slug}}/ vào trường hướng dẫn tùy chỉnh. Điều này không thêm chức năng, mà giúp dễ dàng đưa chế độ này vào các tệp YAML quy tắc toàn cục và chia sẻ với người khác. Thư mục nguồn sẽ bị xóa sau khi hợp nhất.",
 		"confirmPrompt": "Nhập \"confirm\" để tiếp tục:",
 		"confirmPlaceholder": "confirm",
+		"confirmText": "confirm",
 		"cancel": "Hủy",
 		"consolidate": "Hợp nhất quy tắc",
 		"consolidating": "Đang hợp nhất..."
@@ -173,5 +174,8 @@
 		},
 		"deleteMode": "Xóa chế độ"
 	},
-	"allFiles": "tất cả các tệp"
+	"allFiles": "tất cả các tệp",
+	"advanced": {
+		"title": "Nâng cao"
+	}
 }

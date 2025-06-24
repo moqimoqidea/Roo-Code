@@ -55,9 +55,13 @@
 		"description": "This moves rules from the .roo/rules-{{slug}}/ folder into the custom instructions field. This doesn't add functionality, but makes it easier to include this mode in global rules YAML files and share it with others. The source folder will be removed after consolidation.",
 		"confirmPrompt": "Type \"confirm\" to proceed:",
 		"confirmPlaceholder": "confirm",
+		"confirmText": "confirm",
 		"cancel": "Cancel",
 		"consolidate": "Consolidate Rules",
 		"consolidating": "Consolidating..."
+	},
+	"advanced": {
+		"title": "Advanced"
 	},
 	"globalCustomInstructions": {
 		"title": "Custom Instructions for All Modes",

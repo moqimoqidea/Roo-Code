@@ -55,6 +55,7 @@
 		"description": "這會將 .roo/rules-{{slug}}/ 資料夾中的規則移至自訂指令欄位。這不會增加功能，但會讓此模式更容易包含在全域規則 YAML 檔案中並與他人分享。合併後，來源資料夾將會被移除。",
 		"confirmPrompt": "輸入 \"confirm\" 以繼續：",
 		"confirmPlaceholder": "confirm",
+		"confirmText": "confirm",
 		"cancel": "取消",
 		"consolidate": "合併規則",
 		"consolidating": "正在合併..."
@@ -173,5 +174,8 @@
 		},
 		"deleteMode": "刪除模式"
 	},
-	"allFiles": "所有檔案"
+	"allFiles": "所有檔案",
+	"advanced": {
+		"title": "進階"
+	}
 }

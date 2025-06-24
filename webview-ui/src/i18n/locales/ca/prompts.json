@@ -55,9 +55,13 @@
 		"description": "Això mou les regles de la carpeta .roo/rules-{{slug}}/ al camp d'instruccions personalitzades. Això no afegeix funcionalitat, sinó que facilita la inclusió d'aquest mode en els fitxers YAML de regles globals i el seu intercanvi amb altres. La carpeta d'origen s'eliminarà després de la consolidació.",
 		"confirmPrompt": "Escriviu \"confirmar\" per continuar:",
 		"confirmPlaceholder": "confirmar",
+		"confirmText": "confirmar",
 		"cancel": "Cancel·lar",
 		"consolidate": "Consolidar regles",
 		"consolidating": "Consolidant..."
+	},
+	"advanced": {
+		"title": "Avançat"
 	},
 	"globalCustomInstructions": {
 		"title": "Instruccions personalitzades per a tots els modes",

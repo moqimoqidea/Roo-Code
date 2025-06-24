@@ -55,9 +55,13 @@
 		"description": "Questo sposta le regole dalla cartella .roo/rules-{{slug}}/ nel campo delle istruzioni personalizzate. Ciò non aggiunge funzionalità, ma semplifica l'inclusione di questa modalità nei file YAML delle regole globali e la condivisione con altri. La cartella di origine verrà rimossa dopo la consolidazione.",
 		"confirmPrompt": "Digita \"conferma\" per procedere:",
 		"confirmPlaceholder": "conferma",
+		"confirmText": "conferma",
 		"cancel": "Annulla",
 		"consolidate": "Consolida regole",
 		"consolidating": "Consolidamento..."
+	},
+	"advanced": {
+		"title": "Avanzato"
 	},
 	"globalCustomInstructions": {
 		"title": "Istruzioni personalizzate per tutte le modalità",

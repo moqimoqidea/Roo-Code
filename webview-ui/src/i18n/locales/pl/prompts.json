@@ -55,9 +55,13 @@
 		"description": "To przenosi reguły z folderu .roo/rules-{{slug}}/ do pola niestandardowych instrukcji. Nie dodaje to funkcjonalności, ale ułatwia włączenie tego trybu do globalnych plików YAML z regułami i udostępnianie go innym. Folder źródłowy zostanie usunięty po konsolidacji.",
 		"confirmPrompt": "Wpisz \"potwierdź\", aby kontynuować:",
 		"confirmPlaceholder": "potwierdź",
+		"confirmText": "potwierdź",
 		"cancel": "Anuluj",
 		"consolidate": "Konsoliduj reguły",
 		"consolidating": "Konsolidowanie..."
+	},
+	"advanced": {
+		"title": "Zaawansowane"
 	},
 	"globalCustomInstructions": {
 		"title": "Niestandardowe instrukcje dla wszystkich trybów",

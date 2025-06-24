@@ -577,9 +577,6 @@ export class CustomModesManager {
 				return { success: false, error: "Rules directory not found" }
 			}
 
-			// Load rule files from the directory
-			const ruleContent = await loadRuleFiles(workspacePath)
-
 			// Extract content specific to this mode by looking for the mode-specific rules
 			let modeSpecificRules = ""
 			try {

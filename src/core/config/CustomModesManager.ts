@@ -13,6 +13,7 @@ import { logger } from "../../utils/logging"
 import { GlobalFileNames } from "../../shared/globalFileNames"
 import { ensureSettingsDirectoryExists } from "../../utils/globalContext"
 import { t } from "../../i18n"
+import { loadRuleFiles } from "../prompts/sections/custom-instructions"
 
 const ROOMODES_FILENAME = ".roomodes"
 
@@ -498,6 +499,146 @@ export class CustomModesManager {
 		} catch (error) {
 			const errorMessage = error instanceof Error ? error.message : String(error)
 			vscode.window.showErrorMessage(t("common:customModes.errors.resetFailed", { error: errorMessage }))
+		}
+	}
+
+	public async checkRulesDirectoryHasContent(slug: string): Promise<boolean> {
+		try {
+			// Get workspace path
+			const workspacePath = getWorkspacePath()
+			if (!workspacePath) {
+				return false
+			}
+
+			// Check for .roo/rules-{slug}/ directory
+			const modeRulesDir = path.join(workspacePath, ".roo", `rules-${slug}`)
+
+			try {
+				const stats = await fs.stat(modeRulesDir)
+				if (!stats.isDirectory()) {
+					return false
+				}
+			} catch (error) {
+				return false
+			}
+
+			// Check if directory has any content files
+			try {
+				const entries = await fs.readdir(modeRulesDir, { withFileTypes: true, recursive: true })
+
+				for (const entry of entries) {
+					if (entry.isFile()) {
+						const filePath = path.join(entry.parentPath || modeRulesDir, entry.name)
+						const content = await fs.readFile(filePath, "utf-8")
+						if (content.trim()) {
+							return true // Found at least one file with content
+						}
+					}
+				}
+
+				return false // No files with content found
+			} catch (error) {
+				return false
+			}
+		} catch (error) {
+			logger.error("Failed to check rules directory for mode", {
+				slug,
+				error: error instanceof Error ? error.message : String(error),
+			})
+			return false
+		}
+	}
+
+	public async consolidateRulesForMode(slug: string): Promise<{ success: boolean; error?: string }> {
+		try {
+			// Get all current modes
+			const allModes = await this.getCustomModes()
+			const mode = allModes.find((m) => m.slug === slug)
+
+			if (!mode) {
+				return { success: false, error: "Mode not found" }
+			}
+
+			// Get workspace path
+			const workspacePath = getWorkspacePath()
+			if (!workspacePath) {
+				return { success: false, error: "No workspace found" }
+			}
+
+			// Check for .roo/rules-{slug}/ directory
+			const modeRulesDir = path.join(workspacePath, ".roo", `rules-${slug}`)
+
+			try {
+				const stats = await fs.stat(modeRulesDir)
+				if (!stats.isDirectory()) {
+					return { success: false, error: "Rules directory not found" }
+				}
+			} catch (error) {
+				return { success: false, error: "Rules directory not found" }
+			}
+
+			// Load rule files from the directory
+			const ruleContent = await loadRuleFiles(workspacePath)
+
+			// Extract content specific to this mode by looking for the mode-specific rules
+			let modeSpecificRules = ""
+			try {
+				const entries = await fs.readdir(modeRulesDir, { withFileTypes: true, recursive: true })
+				const files: Array<{ filename: string; content: string }> = []
+
+				for (const entry of entries) {
+					if (entry.isFile()) {
+						const filePath = path.join(entry.parentPath || modeRulesDir, entry.name)
+						const content = await fs.readFile(filePath, "utf-8")
+						if (content.trim()) {
+							files.push({ filename: filePath, content: content.trim() })
+						}
+					}
+				}
+
+				if (files.length === 0) {
+					return { success: false, error: "No rule files found in the directory" }
+				}
+
+				// Format the content without filename headers to avoid confusing the LLM
+				modeSpecificRules = files.map((file) => file.content).join("\n\n")
+			} catch (error) {
+				return { success: false, error: "Failed to read rule files" }
+			}
+
+			if (!modeSpecificRules) {
+				return { success: false, error: "No rule content found" }
+			}
+
+			// Combine existing custom instructions with the consolidated rules
+			const existingInstructions = mode.customInstructions || ""
+			const separator = existingInstructions ? "\n\n" : ""
+			const newInstructions = existingInstructions + separator + modeSpecificRules
+
+			// Update the mode with the new instructions
+			const updatedMode: ModeConfig = {
+				...mode,
+				customInstructions: newInstructions,
+			}
+
+			await this.updateCustomMode(slug, updatedMode)
+
+			// Remove the source directory after successful consolidation
+			try {
+				await fs.rm(modeRulesDir, { recursive: true, force: true })
+			} catch (removeError) {
+				// Log the error but don't fail the operation since consolidation was successful
+				logger.error("Warning: Could not remove rules directory after consolidation", {
+					directory: modeRulesDir,
+					error: removeError instanceof Error ? removeError.message : String(removeError),
+				})
+			}
+
+			return { success: true }
+		} catch (error) {
+			const errorMessage = error instanceof Error ? error.message : String(error)
+			logger.error("Failed to consolidate rules for mode", { slug, error: errorMessage })
+			return { success: false, error: errorMessage }
 		}
 	}
 

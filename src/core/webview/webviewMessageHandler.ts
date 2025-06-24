@@ -1501,6 +1501,57 @@ export const webviewMessageHandler = async (
 				await provider.postStateToWebview()
 			}
 			break
+		case "consolidateRules":
+			if (message.slug) {
+				try {
+					const result = await provider.customModesManager.consolidateRulesForMode(message.slug)
+
+					if (result.success) {
+						// Update state after consolidating rules
+						const customModes = await provider.customModesManager.getCustomModes()
+						await updateGlobalState("customModes", customModes)
+						await provider.postStateToWebview()
+
+						// Send success message to webview
+						provider.postMessageToWebview({
+							type: "consolidateRulesResult",
+							success: true,
+							slug: message.slug,
+						})
+					} else {
+						// Send error message to webview
+						provider.postMessageToWebview({
+							type: "consolidateRulesResult",
+							success: false,
+							error: result.error,
+							slug: message.slug,
+						})
+					}
+				} catch (error) {
+					const errorMessage = error instanceof Error ? error.message : String(error)
+					provider.log(`Failed to consolidate rules for mode ${message.slug}: ${errorMessage}`)
+
+					// Send error message to webview
+					provider.postMessageToWebview({
+						type: "consolidateRulesResult",
+						success: false,
+						error: errorMessage,
+						slug: message.slug,
+					})
+				}
+			}
+			break
+		case "checkRulesDirectory":
+			if (message.slug) {
+				const hasContent = await provider.customModesManager.checkRulesDirectoryHasContent(message.slug)
+
+				provider.postMessageToWebview({
+					type: "checkRulesDirectoryResult",
+					slug: message.slug,
+					hasContent: hasContent,
+				})
+			}
+			break
 		case "humanRelayResponse":
 			if (message.requestId && message.text) {
 				vscode.commands.executeCommand(getCommand("handleHumanRelayResponse"), {

@@ -50,6 +50,15 @@
 		"description": "Fügen Sie verhaltensspezifische Richtlinien für den Modus {{modeName}} hinzu.",
 		"loadFromFile": "Benutzerdefinierte Anweisungen für den Modus {{mode}} können auch aus dem Ordner <span>.roo/rules-{{slug}}/</span> in deinem Arbeitsbereich geladen werden (.roorules-{{slug}} und .clinerules-{{slug}} sind veraltet und werden bald nicht mehr funktionieren)."
 	},
+	"consolidateRules": {
+		"title": "Regeln konsolidieren",
+		"description": "Dies verschiebt Regeln aus dem Ordner .roo/rules-{{slug}}/ in das Feld für benutzerdefinierte Anweisungen. Dies fügt keine Funktionalität hinzu, sondern erleichtert die Aufnahme dieses Modus in globale YAML-Regeldateien und das Teilen mit anderen. Der Quellordner wird nach der Konsolidierung entfernt.",
+		"confirmPrompt": "Gib \"bestätigen\" ein, um fortzufahren:",
+		"confirmPlaceholder": "bestätigen",
+		"cancel": "Abbrechen",
+		"consolidate": "Regeln konsolidieren",
+		"consolidating": "Konsolidieren..."
+	},
 	"globalCustomInstructions": {
 		"title": "Benutzerdefinierte Anweisungen für alle Modi",
 		"description": "Diese Anweisungen gelten für alle Modi. Sie bieten einen grundlegenden Satz von Verhaltensweisen, die durch modusspezifische Anweisungen unten erweitert werden können. <0>Mehr erfahren</0>",

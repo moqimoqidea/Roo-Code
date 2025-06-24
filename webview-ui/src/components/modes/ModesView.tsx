@@ -92,6 +92,11 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 	const [showConfigMenu, setShowConfigMenu] = useState(false)
 	const [isCreateModeDialogOpen, setIsCreateModeDialogOpen] = useState(false)
 	const [isSystemPromptDisclosureOpen, setIsSystemPromptDisclosureOpen] = useState(false)
+	const [isConsolidateRulesDialogOpen, setIsConsolidateRulesDialogOpen] = useState(false)
+	const [consolidateRulesMode, setConsolidateRulesMode] = useState<string>("")
+	const [isConsolidating, setIsConsolidating] = useState(false)
+	const [hasRulesToConsolidate, setHasRulesToConsolidate] = useState<Record<string, boolean>>({})
+	const [consolidateConfirmText, setConsolidateConfirmText] = useState("")
 
 	// State for mode selection popover and search
 	const [open, setOpen] = useState(false)
@@ -189,6 +194,22 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 		const findMode = (m: ModeConfig): boolean => m.slug === visualMode
 		return customModes?.find(findMode) || modes.find(findMode)
 	}, [visualMode, customModes, modes])
+
+	// Check if the current mode has rules to consolidate
+	const checkRulesDirectory = useCallback((slug: string) => {
+		vscode.postMessage({
+			type: "checkRulesDirectory",
+			slug: slug,
+		})
+	}, [])
+
+	// Check rules directory when mode changes
+	useEffect(() => {
+		const currentMode = getCurrentMode()
+		if (currentMode?.slug && hasRulesToConsolidate[currentMode.slug] === undefined) {
+			checkRulesDirectory(currentMode.slug)
+		}
+	}, [getCurrentMode, checkRulesDirectory, hasRulesToConsolidate])
 
 	// Helper function to safely access mode properties
 	const getModeProperty = <T extends keyof ModeConfig>(
@@ -397,12 +418,34 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 					setSelectedPromptTitle(`System Prompt (${message.mode} mode)`)
 					setIsDialogOpen(true)
 				}
+			} else if (message.type === "consolidateRulesResult") {
+				setIsConsolidating(false)
+				setIsConsolidateRulesDialogOpen(false)
+				setConsolidateConfirmText("")
+
+				if (message.success) {
+					// Success - update the state to reflect rules are no longer available
+					setHasRulesToConsolidate((prev) => ({
+						...prev,
+						[consolidateRulesMode]: false,
+					}))
+				} else {
+					// Show error message
+					console.error("Failed to consolidate rules:", message.error)
+				}
+
+				setConsolidateRulesMode("")
+			} else if (message.type === "checkRulesDirectoryResult") {
+				setHasRulesToConsolidate((prev) => ({
+					...prev,
+					[message.slug]: message.hasContent,
+				}))
 			}
 		}
 
 		window.addEventListener("message", handler)
 		return () => window.removeEventListener("message", handler)
-	}, [])
+	}, [consolidateRulesMode])
 
 	const handleAgentReset = (
 		modeSlug: string,
@@ -1067,7 +1110,7 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 						</StandardTooltip>
 					</div>
 
-					{/* Custom System Prompt Disclosure */}
+					{/* Advanced Features Disclosure */}
 					<div className="mt-4">
 						<button
 							onClick={() => setIsSystemPromptDisclosureOpen(!isSystemPromptDisclosureOpen)}
@@ -1075,46 +1118,87 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 							aria-expanded={isSystemPromptDisclosureOpen}>
 							<span
 								className={`codicon codicon-${isSystemPromptDisclosureOpen ? "chevron-down" : "chevron-right"} mr-1`}></span>
-							<span>{t("prompts:advancedSystemPrompt.title")}</span>
+							<span>Advanced</span>
 						</button>
 
 						{isSystemPromptDisclosureOpen && (
-							<div className="text-xs text-vscode-descriptionForeground mt-2 ml-5">
-								<Trans
-									i18nKey="prompts:advancedSystemPrompt.description"
-									values={{
-										slug: getCurrentMode()?.slug || "code",
-									}}
-									components={{
-										span: (
-											<span
-												className="text-vscode-textLink-foreground cursor-pointer underline"
-												onClick={() => {
-													const currentMode = getCurrentMode()
-													if (!currentMode) return
+							<div className="mt-2 ml-5 space-y-4">
+								{/* Override System Prompt Section */}
+								<div>
+									<h4 className="text-xs font-semibold text-vscode-foreground mb-2">
+										Override System Prompt
+									</h4>
+									<div className="text-xs text-vscode-descriptionForeground">
+										<Trans
+											i18nKey="prompts:advancedSystemPrompt.description"
+											values={{
+												slug: getCurrentMode()?.slug || "code",
+											}}
+											components={{
+												span: (
+													<span
+														className="text-vscode-textLink-foreground cursor-pointer underline"
+														onClick={() => {
+															const currentMode = getCurrentMode()
+															if (!currentMode) return
 
-													vscode.postMessage({
-														type: "openFile",
-														text: `./.roo/system-prompt-${currentMode.slug}`,
-														values: {
-															create: true,
-															content: "",
-														},
-													})
+															vscode.postMessage({
+																type: "openFile",
+																text: `./.roo/system-prompt-${currentMode.slug}`,
+																values: {
+																	create: true,
+																	content: "",
+																},
+															})
+														}}
+													/>
+												),
+												"1": (
+													<VSCodeLink
+														href={buildDocLink(
+															"features/footgun-prompting",
+															"prompts_advanced_system_prompt",
+														)}
+														style={{ display: "inline" }}></VSCodeLink>
+												),
+												"2": <strong />,
+											}}
+										/>
+									</div>
+								</div>
+
+								{/* Consolidate Rules Section */}
+								{(() => {
+									const currentMode = getCurrentMode()
+									const hasRules = currentMode?.slug && hasRulesToConsolidate[currentMode.slug]
+									return hasRules ? (
+										<div>
+											<h4 className="text-xs font-semibold text-vscode-foreground mb-2">
+												Consolidate Rules
+											</h4>
+											<div className="text-xs text-vscode-descriptionForeground mb-2">
+												{t("prompts:consolidateRules.description", {
+													slug: currentMode?.slug || "this-mode",
+												})}
+											</div>
+											<Button
+												variant="ghost"
+												size="sm"
+												onClick={() => {
+													if (currentMode?.slug) {
+														setConsolidateRulesMode(currentMode.slug)
+														setConsolidateConfirmText("")
+														setIsConsolidateRulesDialogOpen(true)
+													}
 												}}
-											/>
-										),
-										"1": (
-											<VSCodeLink
-												href={buildDocLink(
-													"features/footgun-prompting",
-													"prompts_advanced_system_prompt",
-												)}
-												style={{ display: "inline" }}></VSCodeLink>
-										),
-										"2": <strong />,
-									}}
-								/>
+												title={t("prompts:consolidateRules.title")}
+												data-testid="consolidate-rules-button">
+												<span className="codicon codicon-merge mr-1"></span>
+												{t("prompts:consolidateRules.title")}
+											</Button>
+										</div>
+									) : null
+								})()}
 							</div>
 						)}
 					</div>
@@ -1389,6 +1473,57 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 						<div className="flex justify-end p-3 px-5 border-t border-vscode-editor-lineHighlightBorder bg-vscode-editor-background">
 							<Button variant="secondary" onClick={() => setIsDialogOpen(false)}>
 								{t("prompts:createModeDialog.close")}
+							</Button>
+						</div>
+					</div>
+				</div>
+			)}
+
+			{/* Consolidate Rules Confirmation Dialog */}
+			{isConsolidateRulesDialogOpen && (
+				<div className="fixed inset-0 flex items-center justify-center bg-black/50 z-[1000]">
+					<div className="bg-vscode-editor-background border border-vscode-input-border rounded shadow-md p-5 max-w-md mx-4">
+						<h3 className="text-vscode-foreground mb-3">{t("prompts:consolidateRules.title")}</h3>
+						<p className="text-sm text-vscode-descriptionForeground mb-4">
+							{t("prompts:consolidateRules.description", { modeName: consolidateRulesMode })}
+						</p>
+						<div className="mb-4">
+							<div className="text-sm text-vscode-descriptionForeground mb-2">
+								{t("prompts:consolidateRules.confirmPrompt")}
+							</div>
+							<Input
+								type="text"
+								value={consolidateConfirmText}
+								onChange={(e) => setConsolidateConfirmText(e.target.value)}
+								placeholder={t("prompts:consolidateRules.confirmPlaceholder")}
+								className="w-full"
+								disabled={isConsolidating}
+							/>
+						</div>
+						<div className="flex justify-end gap-2">
+							<Button
+								variant="secondary"
+								onClick={() => {
+									setIsConsolidateRulesDialogOpen(false)
+									setConsolidateRulesMode("")
+									setConsolidateConfirmText("")
+								}}
+								disabled={isConsolidating}>
+								{t("prompts:consolidateRules.cancel")}
+							</Button>
+							<Button
+								variant="default"
+								onClick={() => {
+									setIsConsolidating(true)
+									vscode.postMessage({
+										type: "consolidateRules",
+										slug: consolidateRulesMode,
+									})
+								}}
+								disabled={isConsolidating || consolidateConfirmText.toLowerCase() !== "confirm"}>
+								{isConsolidating
+									? t("prompts:consolidateRules.consolidating")
+									: t("prompts:consolidateRules.consolidate")}
 							</Button>
 						</div>
 					</div>

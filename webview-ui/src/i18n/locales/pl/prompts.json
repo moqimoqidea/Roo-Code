@@ -50,6 +50,15 @@
 		"description": "Dodaj wytyczne dotyczące zachowania specyficzne dla trybu {{modeName}}.",
 		"loadFromFile": "Niestandardowe instrukcje dla trybu {{mode}} mogą być również ładowane z folderu <span>.roo/rules-{{slug}}/</span> w Twoim obszarze roboczym (.roorules-{{slug}} i .clinerules-{{slug}} są przestarzałe i wkrótce przestaną działać)."
 	},
+	"consolidateRules": {
+		"title": "Konsoliduj reguły",
+		"description": "To przenosi reguły z folderu .roo/rules-{{slug}}/ do pola niestandardowych instrukcji. Nie dodaje to funkcjonalności, ale ułatwia włączenie tego trybu do globalnych plików YAML z regułami i udostępnianie go innym. Folder źródłowy zostanie usunięty po konsolidacji.",
+		"confirmPrompt": "Wpisz \"potwierdź\", aby kontynuować:",
+		"confirmPlaceholder": "potwierdź",
+		"cancel": "Anuluj",
+		"consolidate": "Konsoliduj reguły",
+		"consolidating": "Konsolidowanie..."
+	},
 	"globalCustomInstructions": {
 		"title": "Niestandardowe instrukcje dla wszystkich trybów",
 		"description": "Te instrukcje dotyczą wszystkich trybów. Zapewniają podstawowy zestaw zachowań, które mogą być rozszerzone przez instrukcje specyficzne dla trybów poniżej. <0>Dowiedz się więcej</0>",

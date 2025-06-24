@@ -50,6 +50,15 @@
 		"description": "{{modeName}}モードに特化した行動ガイドラインを追加します。",
 		"loadFromFile": "{{mode}}モード固有のカスタム指示は、ワークスペースの<span>.roo/rules-{{slug}}/</span>フォルダからも読み込めます（.roorules-{{slug}}と.clinerules-{{slug}}は非推奨であり、まもなく機能しなくなります）。"
 	},
+	"consolidateRules": {
+		"title": "ルールを統合",
+		"description": "これは、.roo/rules-{{slug}}/ フォルダのルールをカスタム指示フィールドに移動します。これにより機能が追加されるわけではなく、このモードをグローバルルールYAMLファイルに含めたり、他のユーザーと共有したりするのが容易になります。統合後、ソースフォルダは削除されます。",
+		"confirmPrompt": "続行するには「confirm」と入力してください：",
+		"confirmPlaceholder": "confirm",
+		"cancel": "キャンセル",
+		"consolidate": "ルールを統合",
+		"consolidating": "統合中..."
+	},
 	"globalCustomInstructions": {
 		"title": "すべてのモードのカスタム指示",
 		"description": "これらの指示はすべてのモードに適用されます。モード固有の指示で強化できる基本的な動作セットを提供します。<0>詳細はこちら</0>",

@@ -50,6 +50,15 @@
 		"description": "{{modeName}} 모드에 대한 특정 행동 지침을 추가하세요.",
 		"loadFromFile": "{{mode}} 모드에 대한 사용자 지정 지침은 작업 공간의 <span>.roo/rules-{{slug}}/</span> 폴더에서도 로드할 수 있습니다(.roorules-{{slug}}와 .clinerules-{{slug}}는 더 이상 사용되지 않으며 곧 작동을 중단합니다)."
 	},
+	"consolidateRules": {
+		"title": "규칙 통합",
+		"description": "이것은 .roo/rules-{{slug}}/ 폴더의 규칙을 사용자 지정 지침 필드로 이동합니다. 이는 기능을 추가하는 것이 아니라, 이 모드를 전역 규칙 YAML 파일에 포함하고 다른 사람들과 공유하기 쉽게 만듭니다. 통합 후 원본 폴더는 제거됩니다.",
+		"confirmPrompt": "계속하려면 \"confirm\"을 입력하세요:",
+		"confirmPlaceholder": "confirm",
+		"cancel": "취소",
+		"consolidate": "규칙 통합",
+		"consolidating": "통합 중..."
+	},
 	"globalCustomInstructions": {
 		"title": "모든 모드에 대한 사용자 지정 지침",
 		"description": "이 지침은 모든 모드에 적용됩니다. 아래의 모드별 지침으로 향상될 수 있는 기본 동작 세트를 제공합니다. <0>더 알아보기</0>",

@@ -50,6 +50,15 @@
 		"description": "Add behavioral guidelines specific to {{modeName}} mode.",
 		"loadFromFile": "Custom instructions specific to {{mode}} mode can also be loaded from the <span>.roo/rules-{{slug}}/</span> folder in your workspace (.roorules-{{slug}} and .clinerules-{{slug}} are deprecated and will stop working soon)."
 	},
+	"consolidateRules": {
+		"title": "Consolidate Rules",
+		"description": "This moves rules from the .roo/rules-{{slug}}/ folder into the custom instructions field. This doesn't add functionality, but makes it easier to include this mode in global rules YAML files and share it with others. The source folder will be removed after consolidation.",
+		"confirmPrompt": "Type \"confirm\" to proceed:",
+		"confirmPlaceholder": "confirm",
+		"cancel": "Cancel",
+		"consolidate": "Consolidate Rules",
+		"consolidating": "Consolidating..."
+	},
 	"globalCustomInstructions": {
 		"title": "Custom Instructions for All Modes",
 		"description": "These instructions apply to all modes. They provide a base set of behaviors that can be enhanced by mode-specific instructions below. <0>Learn more</0>",

@@ -50,6 +50,15 @@
 		"description": "Adicione diretrizes comportamentais específicas para o modo {{modeName}}.",
 		"loadFromFile": "Instruções personalizadas específicas para o modo {{mode}} também podem ser carregadas da pasta <span>.roo/rules-{{slug}}/</span> no seu espaço de trabalho (.roorules-{{slug}} e .clinerules-{{slug}} estão obsoletos e deixarão de funcionar em breve)."
 	},
+	"consolidateRules": {
+		"title": "Consolidar regras",
+		"description": "Isso move as regras da pasta .roo/rules-{{slug}}/ para o campo de instruções personalizadas. Isso não adiciona funcionalidade, mas facilita a inclusão deste modo em arquivos YAML de regras globais e o compartilhamento com outros. A pasta de origem será removida após a consolidação.",
+		"confirmPrompt": "Digite \"confirmar\" para continuar:",
+		"confirmPlaceholder": "confirmar",
+		"cancel": "Cancelar",
+		"consolidate": "Consolidar regras",
+		"consolidating": "Consolidando..."
+	},
 	"globalCustomInstructions": {
 		"title": "Instruções personalizadas para todos os modos",
 		"description": "Estas instruções se aplicam a todos os modos. Elas fornecem um conjunto base de comportamentos que podem ser aprimorados por instruções específicas do modo abaixo. <0>Saiba mais</0>",

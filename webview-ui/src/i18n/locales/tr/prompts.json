@@ -50,6 +50,15 @@
 		"description": "{{modeName}} modu için özel davranış yönergeleri ekleyin.",
 		"loadFromFile": "{{mode}} moduna özgü özel talimatlar ayrıca çalışma alanınızdaki <span>.roo/rules-{{slug}}/</span> klasöründen yüklenebilir (.roorules-{{slug}} ve .clinerules-{{slug}} kullanımdan kaldırılmıştır ve yakında çalışmayı durduracaklardır)."
 	},
+	"consolidateRules": {
+		"title": "Kuralları Birleştir",
+		"description": "Bu, kuralları .roo/rules-{{slug}}/ klasöründen özel talimatlar alanına taşır. Bu, işlevsellik eklemez, ancak bu modu genel kurallar YAML dosyalarına dahil etmeyi ve başkalarıyla paylaşmayı kolaylaştırır. Kaynak klasör konsolidasyondan sonra kaldırılacaktır.",
+		"confirmPrompt": "Devam etmek için \"onayla\" yazın:",
+		"confirmPlaceholder": "onayla",
+		"cancel": "İptal",
+		"consolidate": "Kuralları Birleştir",
+		"consolidating": "Birleştiriliyor..."
+	},
 	"globalCustomInstructions": {
 		"title": "Tüm Modlar için Özel Talimatlar",
 		"description": "Bu talimatlar tüm modlara uygulanır. Aşağıdaki moda özgü talimatlarla geliştirilebilen temel davranış seti sağlarlar. <0>Daha fazla bilgi edinin</0>",

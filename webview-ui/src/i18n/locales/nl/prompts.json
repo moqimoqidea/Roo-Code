@@ -50,6 +50,15 @@
 		"description": "Voeg gedragsrichtlijnen toe die specifiek zijn voor de modus {{modeName}}.",
 		"loadFromFile": "Modusspecifieke instructies voor {{mode}} kunnen ook worden geladen uit de map <span>.roo/rules-{{slug}}/</span> in je werkruimte (.roorules-{{slug}} en .clinerules-{{slug}} zijn verouderd en werken binnenkort niet meer)."
 	},
+	"consolidateRules": {
+		"title": "Regels consolideren",
+		"description": "Dit verplaatst regels van de .roo/rules-{{slug}}/-map naar het veld voor aangepaste instructies. Dit voegt geen functionaliteit toe, maar maakt het gemakkelijker om deze modus op te nemen in globale YAML-regelbestanden en te delen met anderen. De bronmap wordt na consolidatie verwijderd.",
+		"confirmPrompt": "Typ \"bevestigen\" om door te gaan:",
+		"confirmPlaceholder": "bevestigen",
+		"cancel": "Annuleren",
+		"consolidate": "Regels consolideren",
+		"consolidating": "Consolideren..."
+	},
 	"globalCustomInstructions": {
 		"title": "Aangepaste instructies voor alle modi",
 		"description": "Deze instructies gelden voor alle modi. Ze bieden een basisset aan gedragingen die kunnen worden uitgebreid met modusspecifieke instructies hieronder. <0>Meer informatie</0>",

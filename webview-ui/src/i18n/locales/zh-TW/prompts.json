@@ -50,6 +50,15 @@
 		"description": "為 {{modeName}} 模式新增專屬的行為指南。",
 		"loadFromFile": "{{mode}} 模式的自訂指令也可以從工作區的 <span>.roo/rules-{{slug}}/</span> 資料夾載入（.roorules-{{slug}} 和 .clinerules-{{slug}} 已棄用並將很快停止運作）。"
 	},
+	"consolidateRules": {
+		"title": "合併規則",
+		"description": "這會將 .roo/rules-{{slug}}/ 資料夾中的規則移至自訂指令欄位。這不會增加功能，但會讓此模式更容易包含在全域規則 YAML 檔案中並與他人分享。合併後，來源資料夾將會被移除。",
+		"confirmPrompt": "輸入 \"confirm\" 以繼續：",
+		"confirmPlaceholder": "confirm",
+		"cancel": "取消",
+		"consolidate": "合併規則",
+		"consolidating": "正在合併..."
+	},
 	"globalCustomInstructions": {
 		"title": "所有模式的自訂指令",
 		"description": "這些指令適用於所有模式。它們提供了一組基本行為，可以透過下方的模式專屬自訂指令來強化。<0>了解更多</0>",

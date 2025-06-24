@@ -50,6 +50,15 @@
 		"description": "Afegiu directrius de comportament específiques per al mode {{modeName}}.",
 		"loadFromFile": "Les instruccions personalitzades específiques per al mode {{mode}} també es poden carregar des de la carpeta <span>.roo/rules-{{slug}}/</span> al vostre espai de treball (.roorules-{{slug}} i .clinerules-{{slug}} estan obsolets i deixaran de funcionar aviat)."
 	},
+	"consolidateRules": {
+		"title": "Consolidar regles",
+		"description": "Això mou les regles de la carpeta .roo/rules-{{slug}}/ al camp d'instruccions personalitzades. Això no afegeix funcionalitat, sinó que facilita la inclusió d'aquest mode en els fitxers YAML de regles globals i el seu intercanvi amb altres. La carpeta d'origen s'eliminarà després de la consolidació.",
+		"confirmPrompt": "Escriviu \"confirmar\" per continuar:",
+		"confirmPlaceholder": "confirmar",
+		"cancel": "Cancel·lar",
+		"consolidate": "Consolidar regles",
+		"consolidating": "Consolidant..."
+	},
 	"globalCustomInstructions": {
 		"title": "Instruccions personalitzades per a tots els modes",
 		"description": "Aquestes instruccions s'apliquen a tots els modes. Proporcionen un conjunt bàsic de comportaments que es poden millorar amb instruccions específiques de cada mode a continuació. <0>Més informació</0>",

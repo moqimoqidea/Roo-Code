@@ -40,7 +40,25 @@ export class OpenAiEmbedder extends OpenAiNativeHandler implements IEmbedder {
 
 		// Apply model-specific query prefix if required
 		const queryPrefix = getModelQueryPrefix("openai", modelToUse)
-		const processedTexts = queryPrefix ? texts.map((text) => `${queryPrefix}${text}`) : texts
+		const processedTexts = queryPrefix
+			? texts.map((text, index) => {
+					const prefixedText = `${queryPrefix}${text}`
+					const estimatedTokens = Math.ceil(prefixedText.length / 4)
+					if (estimatedTokens > MAX_ITEM_TOKENS) {
+						console.warn(
+							t("embeddings:textWithPrefixExceedsTokenLimit", {
+								index,
+								estimatedTokens,
+								maxTokens: MAX_ITEM_TOKENS,
+								prefixLength: queryPrefix.length,
+							}),
+						)
+						// Return original text without prefix to avoid exceeding limit
+						return text
+					}
+					return prefixedText
+				})
+			: texts
 
 		const allEmbeddings: number[][] = []
 		const usage = { promptTokens: 0, totalTokens: 0 }

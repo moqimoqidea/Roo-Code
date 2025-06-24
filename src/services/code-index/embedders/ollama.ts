@@ -28,7 +28,9 @@ export class CodeIndexOllamaEmbedder implements IEmbedder {
 
 		// Apply model-specific query prefix if required
 		const queryPrefix = getModelQueryPrefix("ollama", modelToUse)
-		const processedTexts = queryPrefix ? texts.map((text) => `${queryPrefix}${text}`) : texts
+		const processedTexts = queryPrefix
+			? texts.map((text) => (text.startsWith(queryPrefix) ? text : `${queryPrefix}${text}`))
+			: texts
 
 		try {
 			// Note: Standard Ollama API uses 'prompt' for single text, not 'input' for array.

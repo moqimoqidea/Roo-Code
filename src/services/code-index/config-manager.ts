@@ -37,6 +37,7 @@ export class CodeIndexConfigManager {
 			codebaseIndexEmbedderProvider: "openai",
 			codebaseIndexEmbedderBaseUrl: "",
 			codebaseIndexEmbedderModelId: "",
+			codebaseIndexSearchMinScore: undefined,
 		}
 
 		const {

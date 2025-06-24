@@ -175,6 +175,43 @@ export const CodeIndexSettings: React.FC<CodeIndexSettingsProps> = ({
 		}
 	}
 
+	// Check if there are unsaved indexing-related changes (excluding search threshold)
+	function hasUnsavedIndexingChanges(config: CodebaseIndexConfig | undefined, apiConfig: ProviderSettings): boolean {
+		// If settings aren't committed, we need to check what specifically changed
+		if (!areSettingsCommitted) {
+			// Get the saved state from vscode
+			const savedState = vscode.getState() as any
+			if (!savedState) return true // If no saved state, consider it as having changes
+
+			const savedConfig = savedState?.codebaseIndexConfig || {}
+			const savedApiConfig = savedState?.apiConfiguration || {}
+
+			// Check if any indexing-related settings changed (excluding search threshold)
+			const indexingConfigChanged =
+				config?.codebaseIndexEnabled !== savedConfig.codebaseIndexEnabled ||
+				config?.codebaseIndexEmbedderProvider !== savedConfig.codebaseIndexEmbedderProvider ||
+				config?.codebaseIndexEmbedderModelId !== savedConfig.codebaseIndexEmbedderModelId ||
+				config?.codebaseIndexEmbedderBaseUrl !== savedConfig.codebaseIndexEmbedderBaseUrl ||
+				config?.codebaseIndexQdrantUrl !== savedConfig.codebaseIndexQdrantUrl
+
+			// Check if API keys changed based on provider
+			const apiKeysChanged =
+				(config?.codebaseIndexEmbedderProvider === "openai" &&
+					apiConfig.codeIndexOpenAiKey !== savedApiConfig.codeIndexOpenAiKey) ||
+				(config?.codebaseIndexEmbedderProvider === "openai-compatible" &&
+					(apiConfig.codebaseIndexOpenAiCompatibleApiKey !==
+						savedApiConfig.codebaseIndexOpenAiCompatibleApiKey ||
+						apiConfig.codebaseIndexOpenAiCompatibleBaseUrl !==
+							savedApiConfig.codebaseIndexOpenAiCompatibleBaseUrl ||
+						apiConfig.codebaseIndexOpenAiCompatibleModelDimension !==
+							savedApiConfig.codebaseIndexOpenAiCompatibleModelDimension)) ||
+				apiConfig.codeIndexQdrantApiKey !== savedApiConfig.codeIndexQdrantApiKey
+
+			return indexingConfigChanged || apiKeysChanged
+		}
+		return false
+	}
+
 	const progressPercentage =
 		indexingStatus.totalItems > 0
 			? (indexingStatus.processedItems / indexingStatus.totalItems) * 100
@@ -245,6 +282,54 @@ export const CodeIndexSettings: React.FC<CodeIndexSettingsProps> = ({
 							</ProgressPrimitive.Root>
 						</div>
 					)}
+
+					<div>
+						<span className="block font-medium mb-1">{t("settings:codeIndex.searchMinScoreLabel")}</span>
+						<div className="flex items-center gap-2">
+							<Slider
+								min={0}
+								max={1}
+								step={0.05}
+								value={[codebaseIndexConfig.codebaseIndexSearchMinScore ?? SEARCH_MIN_SCORE]}
+								onValueChange={([value]) =>
+									setCachedStateField("codebaseIndexConfig", {
+										...codebaseIndexConfig,
+										codebaseIndexSearchMinScore: value,
+									})
+								}
+								data-testid="search-min-score-slider"
+								aria-label={t("settings:codeIndex.searchMinScoreLabel")}
+							/>
+							<span className="w-10">
+								{(codebaseIndexConfig.codebaseIndexSearchMinScore ?? SEARCH_MIN_SCORE).toFixed(2)}
+							</span>
+							<TooltipProvider>
+								<Tooltip>
+									<TooltipTrigger asChild>
+										<Button
+											variant="ghost"
+											size="sm"
+											onClick={() =>
+												setCachedStateField("codebaseIndexConfig", {
+													...codebaseIndexConfig,
+													codebaseIndexSearchMinScore: SEARCH_MIN_SCORE,
+												})
+											}
+											className="h-8 w-8 p-0"
+											data-testid="search-min-score-reset-button">
+											<span className="codicon codicon-debug-restart w-4 h-4" />
+										</Button>
+									</TooltipTrigger>
+									<TooltipContent>
+										<p>{t("settings:codeIndex.searchMinScoreResetTooltip")}</p>
+									</TooltipContent>
+								</Tooltip>
+							</TooltipProvider>
+						</div>
+						<div className="text-vscode-descriptionForeground text-sm mt-1">
+							{t("settings:codeIndex.searchMinScoreDescription")}
+						</div>
+					</div>
 
 					<div className="flex items-center gap-4 font-bold">
 						<div>{t("settings:codeIndex.providerLabel")}</div>
@@ -456,55 +541,7 @@ export const CodeIndexSettings: React.FC<CodeIndexSettingsProps> = ({
 						</div>
 					</div>
 
-					<div>
-						<span className="block font-medium mb-1">{t("settings:codeIndex.searchMinScoreLabel")}</span>
-						<div className="flex items-center gap-2">
-							<Slider
-								min={0}
-								max={1}
-								step={0.05}
-								value={[codebaseIndexConfig.codebaseIndexSearchMinScore ?? SEARCH_MIN_SCORE]}
-								onValueChange={([value]) =>
-									setCachedStateField("codebaseIndexConfig", {
-										...codebaseIndexConfig,
-										codebaseIndexSearchMinScore: value,
-									})
-								}
-								data-testid="search-min-score-slider"
-								aria-label={t("settings:codeIndex.searchMinScoreLabel")}
-							/>
-							<span className="w-10">
-								{(codebaseIndexConfig.codebaseIndexSearchMinScore ?? SEARCH_MIN_SCORE).toFixed(2)}
-							</span>
-							<TooltipProvider>
-								<Tooltip>
-									<TooltipTrigger asChild>
-										<Button
-											variant="ghost"
-											size="sm"
-											onClick={() =>
-												setCachedStateField("codebaseIndexConfig", {
-													...codebaseIndexConfig,
-													codebaseIndexSearchMinScore: SEARCH_MIN_SCORE,
-												})
-											}
-											className="h-8 w-8 p-0"
-											data-testid="search-min-score-reset-button">
-											<span className="codicon codicon-debug-restart w-4 h-4" />
-										</Button>
-									</TooltipTrigger>
-									<TooltipContent>
-										<p>{t("settings:codeIndex.searchMinScoreResetTooltip")}</p>
-									</TooltipContent>
-								</Tooltip>
-							</TooltipProvider>
-						</div>
-						<div className="text-vscode-descriptionForeground text-sm mt-1">
-							{t("settings:codeIndex.searchMinScoreDescription")}
-						</div>
-					</div>
-
-					{(!areSettingsCommitted || !validateIndexingConfig(codebaseIndexConfig, apiConfiguration)) && (
+					{hasUnsavedIndexingChanges(codebaseIndexConfig, apiConfiguration) && (
 						<p className="text-sm text-vscode-descriptionForeground mb-2">
 							{t("settings:codeIndex.unsavedSettingsMessage")}
 						</p>
@@ -515,7 +552,7 @@ export const CodeIndexSettings: React.FC<CodeIndexSettingsProps> = ({
 							<VSCodeButton
 								onClick={() => vscode.postMessage({ type: "startIndexing" })}
 								disabled={
-									!areSettingsCommitted ||
+									hasUnsavedIndexingChanges(codebaseIndexConfig, apiConfiguration) ||
 									!validateIndexingConfig(codebaseIndexConfig, apiConfiguration)
 								}>
 								{t("settings:codeIndex.startIndexingButton")}

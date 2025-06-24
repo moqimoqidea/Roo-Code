@@ -471,7 +471,7 @@ export const CodeIndexSettings: React.FC<CodeIndexSettingsProps> = ({
 								}
 								data-testid="search-min-score-slider"
 							/>
-							<span className="w-20">
+							<span className="w-10">
 								{(codebaseIndexConfig.codebaseIndexSearchMinScore || 0.4).toFixed(2)}
 							</span>
 							<TooltipProvider>

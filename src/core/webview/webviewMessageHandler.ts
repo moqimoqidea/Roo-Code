@@ -1649,8 +1649,11 @@ export const webviewMessageHandler = async (
 					// Read the file content
 					const yamlContent = await fs.readFile(fileUri[0].fsPath, "utf-8")
 
-					// Import the mode
-					const result = await provider.customModesManager.importModeWithRules(yamlContent)
+					// Import the mode with the specified source level
+					const result = await provider.customModesManager.importModeWithRules(
+						yamlContent,
+						message.source || "project", // Default to project if not specified
+					)
 
 					if (result.success) {
 						// Update state after importing

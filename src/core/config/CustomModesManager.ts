@@ -685,7 +685,10 @@ export class CustomModesManager {
 		}
 	}
 
-	public async importModeWithRules(yamlContent: string): Promise<{ success: boolean; error?: string }> {
+	public async importModeWithRules(
+		yamlContent: string,
+		source: "global" | "project" = "project",
+	): Promise<{ success: boolean; error?: string }> {
 		try {
 			// Parse the YAML content
 			const importData = yaml.parse(yamlContent)
@@ -698,23 +701,24 @@ export class CustomModesManager {
 				return { success: false, error: "Invalid import format: no custom modes found" }
 			}
 
-			const workspacePath = getWorkspacePath()
-			if (!workspacePath) {
-				return { success: false, error: "No workspace found" }
-			}
-
 			// Process each mode in the import
 			for (const importMode of importData.customModes) {
 				const { rulesFiles, ...modeConfig } = importMode
 
-				// Import the mode configuration
+				// Import the mode configuration with the specified source
 				await this.updateCustomMode(importMode.slug, {
 					...modeConfig,
-					source: "project", // Always import as project mode
+					source: source, // Use the provided source parameter
 				})
 
-				// Import rules files if they exist
-				if (rulesFiles && Array.isArray(rulesFiles)) {
+				// Only import rules files for project-level imports
+				if (source === "project" && rulesFiles && Array.isArray(rulesFiles)) {
+					const workspacePath = getWorkspacePath()
+					if (!workspacePath) {
+						logger.warn("No workspace found for project-level import, skipping rules files")
+						continue
+					}
+
 					for (const ruleFile of rulesFiles) {
 						if (ruleFile.relativePath && ruleFile.content) {
 							const targetPath = path.join(workspacePath, ".roo", ruleFile.relativePath)
@@ -727,6 +731,30 @@ export class CustomModesManager {
 							await fs.writeFile(targetPath, ruleFile.content, "utf-8")
 						}
 					}
+				} else if (source === "global" && rulesFiles && Array.isArray(rulesFiles)) {
+					// For global imports, we need to merge the rules content into the mode's customInstructions
+					let mergedInstructions = modeConfig.customInstructions || ""
+
+					// Add a separator if there are existing instructions
+					if (mergedInstructions) {
+						mergedInstructions += "\n\n"
+					}
+
+					// Add the rules content
+					mergedInstructions += "# Imported Rules\n\n"
+
+					for (const ruleFile of rulesFiles) {
+						if (ruleFile.content) {
+							mergedInstructions += `# Rules from ${ruleFile.relativePath}:\n${ruleFile.content}\n\n`
+						}
+					}
+
+					// Update the mode with merged instructions
+					await this.updateCustomMode(importMode.slug, {
+						...modeConfig,
+						source: source,
+						customInstructions: mergedInstructions.trim(),
+					})
 				}
 			}
 

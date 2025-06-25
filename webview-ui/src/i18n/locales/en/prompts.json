@@ -57,6 +57,18 @@
 		"description": "Export this mode with rules from the .roo/rules-{{slug}}/ folder combined into a shareable YAML file. The original files remain unchanged.",
 		"exporting": "Exporting..."
 	},
+	"importMode": {
+		"selectLevel": "Choose where to import this mode:",
+		"import": "Import",
+		"global": {
+			"label": "Global Level",
+			"description": "Available across all projects. Rules will be merged into custom instructions."
+		},
+		"project": {
+			"label": "Project Level",
+			"description": "Only available in this workspace. Rules will be created in .roo/rules-{slug}/ folder."
+		}
+	},
 	"advanced": {
 		"title": "Advanced: Override System Prompt"
 	},

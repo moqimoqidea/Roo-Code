@@ -93,6 +93,7 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 	const [isCreateModeDialogOpen, setIsCreateModeDialogOpen] = useState(false)
 	const [isSystemPromptDisclosureOpen, setIsSystemPromptDisclosureOpen] = useState(false)
 	const [isExporting, setIsExporting] = useState(false)
+	const [showImportDialog, setShowImportDialog] = useState(false)
 	const [hasRulesToExport, setHasRulesToExport] = useState<Record<string, boolean>>({})
 
 	// State for mode selection popover and search
@@ -1123,11 +1124,7 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 						{/* Import button - always visible */}
 						<Button
 							variant="default"
-							onClick={() => {
-								vscode.postMessage({
-									type: "importMode",
-								})
-							}}
+							onClick={() => setShowImportDialog(true)}
 							title={t("prompts:modes.importMode")}
 							data-testid="import-mode-button">
 							<Download className="h-4 w-4" />
@@ -1465,6 +1462,57 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 						<div className="flex justify-end p-3 px-5 border-t border-vscode-editor-lineHighlightBorder bg-vscode-editor-background">
 							<Button variant="secondary" onClick={() => setIsDialogOpen(false)}>
 								{t("prompts:createModeDialog.close")}
+							</Button>
+						</div>
+					</div>
+				</div>
+			)}
+
+			{/* Import Mode Dialog */}
+			{showImportDialog && (
+				<div className="fixed inset-0 flex items-center justify-center bg-black/50 z-[1000]">
+					<div className="bg-vscode-editor-background border border-vscode-editor-lineHighlightBorder rounded-lg shadow-lg p-6 max-w-md w-full">
+						<h3 className="text-lg font-semibold mb-4">{t("prompts:modes.importMode")}</h3>
+						<p className="text-sm text-vscode-descriptionForeground mb-4">
+							{t("prompts:importMode.selectLevel")}
+						</p>
+						<div className="space-y-3 mb-6">
+							<label className="flex items-start gap-2 cursor-pointer">
+								<input type="radio" name="importLevel" value="global" className="mt-1" defaultChecked />
+								<div>
+									<div className="font-medium">{t("prompts:importMode.global.label")}</div>
+									<div className="text-xs text-vscode-descriptionForeground">
+										{t("prompts:importMode.global.description")}
+									</div>
+								</div>
+							</label>
+							<label className="flex items-start gap-2 cursor-pointer">
+								<input type="radio" name="importLevel" value="project" className="mt-1" />
+								<div>
+									<div className="font-medium">{t("prompts:importMode.project.label")}</div>
+									<div className="text-xs text-vscode-descriptionForeground">
+										{t("prompts:importMode.project.description")}
+									</div>
+								</div>
+							</label>
+						</div>
+						<div className="flex justify-end gap-2">
+							<Button variant="secondary" onClick={() => setShowImportDialog(false)}>
+								{t("prompts:createModeDialog.buttons.cancel")}
+							</Button>
+							<Button
+								variant="default"
+								onClick={() => {
+									const selectedLevel = (
+										document.querySelector('input[name="importLevel"]:checked') as HTMLInputElement
+									)?.value as "global" | "project"
+									setShowImportDialog(false)
+									vscode.postMessage({
+										type: "importMode",
+										source: selectedLevel || "global",
+									})
+								}}>
+								{t("prompts:importMode.import")}
 							</Button>
 						</div>
 					</div>

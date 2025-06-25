@@ -1478,20 +1478,26 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 						</p>
 						<div className="space-y-3 mb-6">
 							<label className="flex items-start gap-2 cursor-pointer">
-								<input type="radio" name="importLevel" value="global" className="mt-1" defaultChecked />
-								<div>
-									<div className="font-medium">{t("prompts:importMode.global.label")}</div>
-									<div className="text-xs text-vscode-descriptionForeground">
-										{t("prompts:importMode.global.description")}
-									</div>
-								</div>
-							</label>
-							<label className="flex items-start gap-2 cursor-pointer">
-								<input type="radio" name="importLevel" value="project" className="mt-1" />
+								<input
+									type="radio"
+									name="importLevel"
+									value="project"
+									className="mt-1"
+									defaultChecked
+								/>
 								<div>
 									<div className="font-medium">{t("prompts:importMode.project.label")}</div>
 									<div className="text-xs text-vscode-descriptionForeground">
 										{t("prompts:importMode.project.description")}
+									</div>
+								</div>
+							</label>
+							<label className="flex items-start gap-2 cursor-pointer">
+								<input type="radio" name="importLevel" value="global" className="mt-1" />
+								<div>
+									<div className="font-medium">{t("prompts:importMode.global.label")}</div>
+									<div className="text-xs text-vscode-descriptionForeground">
+										{t("prompts:importMode.global.description")}
 									</div>
 								</div>
 							</label>
@@ -1509,7 +1515,7 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 									setShowImportDialog(false)
 									vscode.postMessage({
 										type: "importMode",
-										source: selectedLevel || "global",
+										source: selectedLevel || "project",
 									})
 								}}>
 								{t("prompts:importMode.import")}

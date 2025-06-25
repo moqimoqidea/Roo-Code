@@ -66,7 +66,7 @@
 		},
 		"project": {
 			"label": "Project Level",
-			"description": "Only available in this workspace. Rules will be created in .roo/rules-{slug}/ folder."
+			"description": "Only available in this workspace. If the exported mode contained rules files, they will be recreated in .roo/rules-{slug}/ folder."
 		}
 	},
 	"advanced": {

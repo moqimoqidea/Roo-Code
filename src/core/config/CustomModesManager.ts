@@ -715,8 +715,7 @@ export class CustomModesManager {
 				if (source === "project" && rulesFiles && Array.isArray(rulesFiles)) {
 					const workspacePath = getWorkspacePath()
 					if (!workspacePath) {
-						logger.warn("No workspace found for project-level import, skipping rules files")
-						continue
+						return { success: false, error: "No workspace found" }
 					}
 
 					// First, remove the existing rules folder for this mode if it exists

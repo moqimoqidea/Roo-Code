@@ -1098,15 +1098,12 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 					</div>
 
 					{/* Export/Import Mode Buttons */}
-					{(() => {
-						const currentMode = getCurrentMode()
-						const hasRules = currentMode?.slug && hasRulesToExport[currentMode.slug]
-						const isCustomMode = currentMode && findModeBySlug(currentMode.slug, customModes)
-
-						// Show export button if mode has rules or is a custom mode
-						if (hasRules || isCustomMode) {
-							return (
-								<div className="flex flex-wrap items-center gap-2">
+					<div className="flex items-center gap-2">
+						{(() => {
+							const currentMode = getCurrentMode()
+							// Show export button only when a mode is selected
+							if (currentMode) {
+								return (
 									<Button
 										onClick={() => {
 											if (currentMode?.slug) {
@@ -1121,28 +1118,29 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 										className="w-28"
 										title={t("prompts:exportMode.title")}
 										data-testid="export-mode-button">
-										<Upload className="p-0.5" />
+										<Upload className="mr-1 h-4 w-4" />
 										{isExporting
 											? t("prompts:exportMode.exporting")
 											: t("prompts:exportMode.title")}
 									</Button>
-									<Button
-										onClick={() => {
-											vscode.postMessage({
-												type: "importMode",
-											})
-										}}
-										className="w-28"
-										title={t("prompts:modes.importMode")}
-										data-testid="import-mode-button">
-										<Download className="p-0.5" />
-										{t("prompts:modes.importMode")}
-									</Button>
-								</div>
-							)
-						}
-						return null
-					})()}
+								)
+							}
+							return null
+						})()}
+						{/* Import button is always visible */}
+						<Button
+							onClick={() => {
+								vscode.postMessage({
+									type: "importMode",
+								})
+							}}
+							className="w-28"
+							title={t("prompts:modes.importMode")}
+							data-testid="import-mode-button">
+							<Download className="mr-1 h-4 w-4" />
+							{t("prompts:modes.importMode")}
+						</Button>
+					</div>
 
 					{/* Advanced Features Disclosure */}
 					<div className="mt-4">

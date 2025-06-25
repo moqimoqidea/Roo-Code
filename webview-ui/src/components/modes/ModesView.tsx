@@ -1106,7 +1106,7 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 						// Show export button if mode has rules or is a custom mode
 						if (hasRules || isCustomMode) {
 							return (
-								<div className="flex flex-wrap items-center gap-2 mb-4">
+								<div className="flex flex-wrap items-center gap-2">
 									<Button
 										onClick={() => {
 											if (currentMode?.slug) {

@@ -1507,9 +1507,29 @@ export const webviewMessageHandler = async (
 					const result = await provider.customModesManager.exportModeWithRules(message.slug)
 
 					if (result.success && result.yaml) {
+						// Get last used directory for export
+						const lastExportPath = getGlobalState("lastModeExportPath")
+						let defaultUri: vscode.Uri
+
+						if (lastExportPath) {
+							// Use the directory from the last export
+							const lastDir = path.dirname(lastExportPath)
+							defaultUri = vscode.Uri.file(path.join(lastDir, `${message.slug}-export.yaml`))
+						} else {
+							// Default to workspace or home directory
+							const workspaceFolders = vscode.workspace.workspaceFolders
+							if (workspaceFolders && workspaceFolders.length > 0) {
+								defaultUri = vscode.Uri.file(
+									path.join(workspaceFolders[0].uri.fsPath, `${message.slug}-export.yaml`),
+								)
+							} else {
+								defaultUri = vscode.Uri.file(`${message.slug}-export.yaml`)
+							}
+						}
+
 						// Show save dialog
 						const saveUri = await vscode.window.showSaveDialog({
-							defaultUri: vscode.Uri.file(`${message.slug}-export.yaml`),
+							defaultUri,
 							filters: {
 								"YAML files": ["yaml", "yml"],
 							},
@@ -1517,6 +1537,9 @@ export const webviewMessageHandler = async (
 						})
 
 						if (saveUri) {
+							// Save the directory for next time
+							await updateGlobalState("lastModeExportPath", saveUri.fsPath)
+
 							// Write the file to the selected location
 							await fs.writeFile(saveUri.fsPath, result.yaml, "utf-8")
 
@@ -1563,11 +1586,28 @@ export const webviewMessageHandler = async (
 			break
 		case "importMode":
 			try {
+				// Get last used directory for import
+				const lastImportPath = getGlobalState("lastModeImportPath")
+				let defaultUri: vscode.Uri | undefined
+
+				if (lastImportPath) {
+					// Use the directory from the last import
+					const lastDir = path.dirname(lastImportPath)
+					defaultUri = vscode.Uri.file(lastDir)
+				} else {
+					// Default to workspace or home directory
+					const workspaceFolders = vscode.workspace.workspaceFolders
+					if (workspaceFolders && workspaceFolders.length > 0) {
+						defaultUri = vscode.Uri.file(workspaceFolders[0].uri.fsPath)
+					}
+				}
+
 				// Show file picker to select YAML file
 				const fileUri = await vscode.window.showOpenDialog({
 					canSelectFiles: true,
 					canSelectFolders: false,
 					canSelectMany: false,
+					defaultUri,
 					filters: {
 						"YAML files": ["yaml", "yml"],
 					},
@@ -1575,6 +1615,9 @@ export const webviewMessageHandler = async (
 				})
 
 				if (fileUri && fileUri[0]) {
+					// Save the directory for next time
+					await updateGlobalState("lastModeImportPath", fileUri[0].fsPath)
+
 					// Read the file content
 					const yamlContent = await fs.readFile(fileUri[0].fsPath, "utf-8")
 

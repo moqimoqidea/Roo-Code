@@ -58,7 +58,7 @@
 		"exporting": "Exporting..."
 	},
 	"advanced": {
-		"title": "Advanced"
+		"title": "Advanced: Override System Prompt"
 	},
 	"globalCustomInstructions": {
 		"title": "Custom Instructions for All Modes",

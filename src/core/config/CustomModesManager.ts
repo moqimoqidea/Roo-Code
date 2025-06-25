@@ -719,6 +719,17 @@ export class CustomModesManager {
 						continue
 					}
 
+					// First, remove the existing rules folder for this mode if it exists
+					const rulesFolderPath = path.join(workspacePath, ".roo", `rules-${importMode.slug}`)
+					try {
+						await fs.rm(rulesFolderPath, { recursive: true, force: true })
+						logger.info(`Removed existing rules folder for mode ${importMode.slug}`)
+					} catch (error) {
+						// It's okay if the folder doesn't exist
+						logger.debug(`No existing rules folder to remove for mode ${importMode.slug}`)
+					}
+
+					// Now import the new rules files
 					for (const ruleFile of rulesFiles) {
 						if (ruleFile.relativePath && ruleFile.content) {
 							const targetPath = path.join(workspacePath, ".roo", ruleFile.relativePath)

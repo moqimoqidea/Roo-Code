@@ -4,6 +4,8 @@
 	"modes": {
 		"title": "Modalità",
 		"createNewMode": "Crea nuova modalità",
+		"importMode": "Importa modalità",
+		"noMatchFound": "Nessuna modalità trovata",
 		"editModesConfig": "Modifica configurazione modalità",
 		"editGlobalModes": "Modifica modalità globali",
 		"editProjectModes": "Modifica modalità di progetto (.roomodes)",
@@ -53,7 +55,20 @@
 	"exportMode": {
 		"title": "Esporta modalità",
 		"description": "Esporta questa modalità in un file YAML con tutte le regole incluse per una facile condivisione con altri.",
-		"export": "Esporta modalità"
+		"export": "Esporta modalità",
+		"exporting": "Esportazione..."
+	},
+	"importMode": {
+		"selectLevel": "Scegli dove importare questa modalità:",
+		"import": "Importa",
+		"global": {
+			"label": "Livello globale",
+			"description": "Disponibile in tutti i progetti. Le regole verranno unite nelle istruzioni personalizzate."
+		},
+		"project": {
+			"label": "Livello di progetto",
+			"description": "Disponibile solo in questo spazio di lavoro. Se la modalità esportata conteneva file di regole, verranno ricreati nella cartella .roo/rules-{slug}/."
+		}
 	},
 	"advanced": {
 		"title": "Avanzato"

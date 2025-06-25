@@ -4,6 +4,8 @@
 	"modes": {
 		"title": "Modi",
 		"createNewMode": "Neuen Modus erstellen",
+		"importMode": "Modus importieren",
+		"noMatchFound": "Keine Modi gefunden",
 		"editModesConfig": "Moduskonfiguration bearbeiten",
 		"editGlobalModes": "Globale Modi bearbeiten",
 		"editProjectModes": "Projektmodi bearbeiten (.roomodes)",
@@ -53,7 +55,20 @@
 	"exportMode": {
 		"title": "Modus exportieren",
 		"description": "Exportiert diesen Modus in eine YAML-Datei mit allen enthaltenen Regeln zum einfachen Teilen mit anderen.",
-		"export": "Modus exportieren"
+		"export": "Modus exportieren",
+		"exporting": "Exportieren..."
+	},
+	"importMode": {
+		"selectLevel": "Wähle, wo dieser Modus importiert werden soll:",
+		"import": "Importieren",
+		"global": {
+			"label": "Globale Ebene",
+			"description": "Verfügbar in allen Projekten. Regeln werden in benutzerdefinierte Anweisungen zusammengeführt."
+		},
+		"project": {
+			"label": "Projektebene",
+			"description": "Nur in diesem Arbeitsbereich verfügbar. Wenn der exportierte Modus Regeldateien enthielt, werden diese im Ordner .roo/rules-{slug}/ neu erstellt."
+		}
 	},
 	"advanced": {
 		"title": "Erweitert"

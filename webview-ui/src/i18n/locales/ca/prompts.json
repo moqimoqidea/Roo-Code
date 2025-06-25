@@ -4,6 +4,8 @@
 	"modes": {
 		"title": "Modes",
 		"createNewMode": "Crear nou mode",
+		"importMode": "Importar mode",
+		"noMatchFound": "No s'han trobat modes",
 		"editModesConfig": "Editar configuració de modes",
 		"editGlobalModes": "Editar modes globals",
 		"editProjectModes": "Editar modes de projecte (.roomodes)",
@@ -53,7 +55,20 @@
 	"exportMode": {
 		"title": "Exportar mode",
 		"description": "Exporta aquest mode a un fitxer YAML amb totes les regles incloses per compartir fàcilment amb altres.",
-		"export": "Exportar mode"
+		"export": "Exportar mode",
+		"exporting": "Exportant..."
+	},
+	"importMode": {
+		"selectLevel": "Tria on importar aquest mode:",
+		"import": "Importar",
+		"global": {
+			"label": "Nivell global",
+			"description": "Disponible a tots els projectes. Les regles es fusionaran amb les instruccions personalitzades."
+		},
+		"project": {
+			"label": "Nivell de projecte",
+			"description": "Només disponible en aquest espai de treball. Si el mode exportat contenia fitxers de regles, es tornaran a crear a la carpeta .roo/rules-{slug}/."
+		}
 	},
 	"advanced": {
 		"title": "Avançat"

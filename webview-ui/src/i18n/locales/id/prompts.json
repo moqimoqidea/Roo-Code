@@ -4,6 +4,8 @@
 	"modes": {
 		"title": "Mode",
 		"createNewMode": "Buat mode baru",
+		"importMode": "Impor mode",
+		"noMatchFound": "Tidak ada mode yang ditemukan",
 		"editModesConfig": "Edit konfigurasi mode",
 		"editGlobalModes": "Edit Mode Global",
 		"editProjectModes": "Edit Mode Proyek (.roomodes)",
@@ -53,7 +55,20 @@
 	"exportMode": {
 		"title": "Ekspor Mode",
 		"description": "Ekspor mode ini ke file YAML dengan semua aturan yang disertakan untuk berbagi dengan mudah dengan orang lain.",
-		"export": "Ekspor Mode"
+		"export": "Ekspor Mode",
+		"exporting": "Mengekspor..."
+	},
+	"importMode": {
+		"selectLevel": "Pilih di mana akan mengimpor mode ini:",
+		"import": "Impor",
+		"global": {
+			"label": "Tingkat Global",
+			"description": "Tersedia di semua proyek. Aturan akan digabungkan ke dalam instruksi kustom."
+		},
+		"project": {
+			"label": "Tingkat Proyek",
+			"description": "Hanya tersedia di ruang kerja ini. Jika mode yang diekspor berisi file aturan, file tersebut akan dibuat ulang di folder .roo/rules-{slug}/."
+		}
 	},
 	"advanced": {
 		"title": "Lanjutan"

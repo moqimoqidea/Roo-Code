@@ -8,7 +8,6 @@ import {
 	MAX_BATCH_RETRIES as MAX_RETRIES,
 	INITIAL_RETRY_DELAY_MS as INITIAL_DELAY_MS,
 } from "../constants"
-import { getModelQueryPrefix } from "../../../shared/embeddingModels"
 import { t } from "../../../i18n"
 
 /**
@@ -37,32 +36,9 @@ export class OpenAiEmbedder extends OpenAiNativeHandler implements IEmbedder {
 	 */
 	async createEmbeddings(texts: string[], model?: string): Promise<EmbeddingResponse> {
 		const modelToUse = model || this.defaultModelId
-
-		// Apply model-specific query prefix if required
-		const queryPrefix = getModelQueryPrefix("openai", modelToUse)
-		const processedTexts = queryPrefix
-			? texts.map((text, index) => {
-					const prefixedText = `${queryPrefix}${text}`
-					const estimatedTokens = Math.ceil(prefixedText.length / 4)
-					if (estimatedTokens > MAX_ITEM_TOKENS) {
-						console.warn(
-							t("embeddings:textWithPrefixExceedsTokenLimit", {
-								index,
-								estimatedTokens,
-								maxTokens: MAX_ITEM_TOKENS,
-								prefixLength: queryPrefix.length,
-							}),
-						)
-						// Return original text without prefix to avoid exceeding limit
-						return text
-					}
-					return prefixedText
-				})
-			: texts
-
 		const allEmbeddings: number[][] = []
 		const usage = { promptTokens: 0, totalTokens: 0 }
-		const remainingTexts = [...processedTexts]
+		const remainingTexts = [...texts]
 
 		while (remainingTexts.length > 0) {
 			const currentBatch: string[] = []

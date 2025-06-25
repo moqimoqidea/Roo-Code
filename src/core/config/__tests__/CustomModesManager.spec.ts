@@ -814,7 +814,7 @@ describe("CustomModesManager", () => {
 				const result = await manager.importModeWithRules(emptyYaml)
 
 				expect(result.success).toBe(false)
-				expect(result.error).toBe("Invalid import format: no custom modes found")
+				expect(result.error).toBe("Invalid import format: Expected 'customModes' array in YAML")
 			})
 
 			it("should return error when no workspace is available", async () => {
@@ -1033,6 +1033,97 @@ describe("CustomModesManager", () => {
 
 				expect(result.success).toBe(false)
 				expect(result.error).toContain("Permission denied")
+			})
+
+			it("should prevent path traversal attacks in import", async () => {
+				const maliciousYaml = yaml.stringify({
+					customModes: [
+						{
+							slug: "test-mode",
+							name: "Test Mode",
+							roleDefinition: "Test Role",
+							groups: ["read"],
+							rulesFiles: [
+								{
+									relativePath: "../../../etc/passwd",
+									content: "malicious content",
+								},
+								{
+									relativePath: "rules-test-mode/../../../sensitive.txt",
+									content: "malicious content",
+								},
+								{
+									relativePath: "/absolute/path/file.txt",
+									content: "malicious content",
+								},
+							],
+						},
+					],
+				})
+
+				let writtenFiles: string[] = []
+				;(fs.readFile as Mock).mockImplementation(async (path: string) => {
+					if (path === mockSettingsPath) {
+						return yaml.stringify({ customModes: [] })
+					}
+					throw new Error("File not found")
+				})
+				;(fs.writeFile as Mock).mockImplementation(async (path: string) => {
+					writtenFiles.push(path)
+					return Promise.resolve()
+				})
+				;(fs.mkdir as Mock).mockResolvedValue(undefined)
+
+				const result = await manager.importModeWithRules(maliciousYaml)
+
+				expect(result.success).toBe(true)
+
+				// Verify that no files were written outside the .roo directory
+				const writtenRuleFiles = writtenFiles.filter((p) => !p.includes(".roomodes"))
+				writtenRuleFiles.forEach((filePath) => {
+					const normalizedPath = path.normalize(filePath)
+					const expectedBasePath = path.normalize(path.join("/mock/workspace", ".roo"))
+					expect(normalizedPath.startsWith(expectedBasePath)).toBe(true)
+				})
+
+				// Verify that malicious paths were not written
+				expect(writtenFiles.some((p) => p.includes("etc/passwd"))).toBe(false)
+				expect(writtenFiles.some((p) => p.includes("sensitive.txt"))).toBe(false)
+				expect(writtenFiles.some((p) => path.isAbsolute(p) && !p.startsWith("/mock/workspace"))).toBe(false)
+			})
+
+			it("should handle malformed YAML gracefully", async () => {
+				const malformedYaml = `
+	customModes:
+			- slug: test-mode
+			  name: Test Mode
+			  roleDefinition: Test Role
+			  groups: [read
+			    invalid yaml here
+				`
+
+				const result = await manager.importModeWithRules(malformedYaml)
+
+				expect(result.success).toBe(false)
+				expect(result.error).toContain("Invalid YAML format")
+			})
+
+			it("should validate mode configuration during import", async () => {
+				const invalidModeYaml = yaml.stringify({
+					customModes: [
+						{
+							slug: "test-mode",
+							name: "", // Invalid: empty name
+							roleDefinition: "", // Invalid: empty role definition
+							groups: ["invalid-group"], // Invalid group
+						},
+					],
+				})
+
+				const result = await manager.importModeWithRules(invalidModeYaml)
+
+				expect(result.success).toBe(false)
+				expect(result.error).toContain("Invalid mode configuration")
 			})
 
 			it("should remove existing rules folder when importing mode without rules", async () => {

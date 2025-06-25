@@ -60,6 +60,7 @@
 	"importMode": {
 		"selectLevel": "Choose where to import this mode:",
 		"import": "Import",
+		"importing": "Importing...",
 		"global": {
 			"label": "Global Level",
 			"description": "Available across all projects. Rules will be merged into custom instructions."

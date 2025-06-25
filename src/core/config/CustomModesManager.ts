@@ -5,7 +5,7 @@ import * as fs from "fs/promises"
 import * as yaml from "yaml"
 import stripBom from "strip-bom"
 
-import { type ModeConfig, customModesSettingsSchema } from "@roo-code/types"
+import { type ModeConfig, customModesSettingsSchema, modeConfigSchema } from "@roo-code/types"
 
 import { fileExistsAtPath } from "../../utils/fs"
 import { getWorkspacePath } from "../../utils/path"
@@ -16,6 +16,31 @@ import { t } from "../../i18n"
 import { loadRuleFiles } from "../prompts/sections/custom-instructions"
 
 const ROOMODES_FILENAME = ".roomodes"
+
+// Type definitions for import/export functionality
+interface RuleFile {
+	relativePath: string
+	content: string
+}
+
+interface ExportedModeConfig extends ModeConfig {
+	rulesFiles?: RuleFile[]
+}
+
+interface ImportData {
+	customModes: ExportedModeConfig[]
+}
+
+interface ExportResult {
+	success: boolean
+	yaml?: string
+	error?: string
+}
+
+interface ImportResult {
+	success: boolean
+	error?: string
+}
 
 export class CustomModesManager {
 	private static readonly cacheTTL = 10_000
@@ -502,6 +527,11 @@ export class CustomModesManager {
 		}
 	}
 
+	/**
+	 * Checks if a mode has associated rules files in the .roo/rules-{slug}/ directory
+	 * @param slug - The mode identifier to check
+	 * @returns True if the mode has rules files with content, false otherwise
+	 */
 	public async checkRulesDirectoryHasContent(slug: string): Promise<boolean> {
 		try {
 			// Get workspace path
@@ -583,7 +613,12 @@ export class CustomModesManager {
 		}
 	}
 
-	public async exportModeWithRules(slug: string): Promise<{ success: boolean; yaml?: string; error?: string }> {
+	/**
+	 * Exports a mode configuration with its associated rules files into a shareable YAML format
+	 * @param slug - The mode identifier to export
+	 * @returns Success status with YAML content or error message
+	 */
+	public async exportModeWithRules(slug: string): Promise<ExportResult> {
 		try {
 			// Import modes from shared to check built-in modes
 			const { modes: builtInModes } = await import("../../shared/modes")
@@ -635,7 +670,7 @@ export class CustomModesManager {
 			// Check for .roo/rules-{slug}/ directory
 			const modeRulesDir = path.join(workspacePath, ".roo", `rules-${slug}`)
 
-			let rulesFiles: Array<{ relativePath: string; content: string }> = []
+			let rulesFiles: RuleFile[] = []
 			try {
 				const stats = await fs.stat(modeRulesDir)
 				if (stats.isDirectory()) {
@@ -659,7 +694,7 @@ export class CustomModesManager {
 			}
 
 			// Create an export mode with rules files preserved
-			const exportMode: ModeConfig & { rulesFiles?: Array<{ relativePath: string; content: string }> } = {
+			const exportMode: ExportedModeConfig = {
 				...mode,
 				// Remove source property for export
 				source: undefined as any,
@@ -685,20 +720,33 @@ export class CustomModesManager {
 		}
 	}
 
+	/**
+	 * Imports modes from YAML content, including their associated rules files
+	 * @param yamlContent - The YAML content containing mode configurations
+	 * @param source - Target level for import: "global" (all projects) or "project" (current workspace only)
+	 * @returns Success status with optional error message
+	 */
 	public async importModeWithRules(
 		yamlContent: string,
 		source: "global" | "project" = "project",
-	): Promise<{ success: boolean; error?: string }> {
+	): Promise<ImportResult> {
 		try {
-			// Parse the YAML content
-			const importData = yaml.parse(yamlContent)
+			// Parse the YAML content with proper type validation
+			let importData: ImportData
+			try {
+				const parsed = yaml.parse(yamlContent)
 
-			if (
-				!importData?.customModes ||
-				!Array.isArray(importData.customModes) ||
-				importData.customModes.length === 0
-			) {
-				return { success: false, error: "Invalid import format: no custom modes found" }
+				// Validate the structure
+				if (!parsed?.customModes || !Array.isArray(parsed.customModes) || parsed.customModes.length === 0) {
+					return { success: false, error: "Invalid import format: Expected 'customModes' array in YAML" }
+				}
+
+				importData = parsed as ImportData
+			} catch (parseError) {
+				return {
+					success: false,
+					error: `Invalid YAML format: ${parseError instanceof Error ? parseError.message : "Failed to parse YAML"}`,
+				}
 			}
 
 			// Check workspace availability early if importing at project level
@@ -712,6 +760,25 @@ export class CustomModesManager {
 			// Process each mode in the import
 			for (const importMode of importData.customModes) {
 				const { rulesFiles, ...modeConfig } = importMode
+
+				// Validate the mode configuration
+				const validationResult = modeConfigSchema.safeParse(modeConfig)
+				if (!validationResult.success) {
+					logger.error(`Invalid mode configuration for ${modeConfig.slug}`, {
+						errors: validationResult.error.errors,
+					})
+					return {
+						success: false,
+						error: `Invalid mode configuration for ${modeConfig.slug}: ${validationResult.error.errors.map((e) => e.message).join(", ")}`,
+					}
+				}
+
+				// Check for existing mode conflicts
+				const existingModes = await this.getCustomModes()
+				const existingMode = existingModes.find((m) => m.slug === importMode.slug)
+				if (existingMode) {
+					logger.info(`Overwriting existing mode: ${importMode.slug}`)
+				}
 
 				// Import the mode configuration with the specified source
 				await this.updateCustomMode(importMode.slug, {
@@ -736,10 +803,27 @@ export class CustomModesManager {
 
 					// Only create new rules files if they exist in the import
 					if (rulesFiles && Array.isArray(rulesFiles) && rulesFiles.length > 0) {
-						// Import the new rules files
+						// Import the new rules files with path validation
 						for (const ruleFile of rulesFiles) {
 							if (ruleFile.relativePath && ruleFile.content) {
-								const targetPath = path.join(workspacePath, ".roo", ruleFile.relativePath)
+								// Validate the relative path to prevent path traversal attacks
+								const normalizedRelativePath = path.normalize(ruleFile.relativePath)
+
+								// Ensure the path doesn't contain traversal sequences
+								if (normalizedRelativePath.includes("..") || path.isAbsolute(normalizedRelativePath)) {
+									logger.error(`Invalid file path detected: ${ruleFile.relativePath}`)
+									continue // Skip this file but continue with others
+								}
+
+								const targetPath = path.join(workspacePath, ".roo", normalizedRelativePath)
+								const normalizedTargetPath = path.normalize(targetPath)
+								const expectedBasePath = path.normalize(path.join(workspacePath, ".roo"))
+
+								// Ensure the resolved path stays within the .roo directory
+								if (!normalizedTargetPath.startsWith(expectedBasePath)) {
+									logger.error(`Path traversal attempt detected: ${ruleFile.relativePath}`)
+									continue // Skip this file but continue with others
+								}
 
 								// Ensure directory exists
 								const targetDir = path.dirname(targetPath)

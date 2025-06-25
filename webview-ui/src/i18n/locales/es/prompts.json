@@ -61,6 +61,7 @@
 	"importMode": {
 		"selectLevel": "Elige dónde importar este modo:",
 		"import": "Importar",
+		"importing": "Importando...",
 		"global": {
 			"label": "Nivel global",
 			"description": "Disponible en todos los proyectos. Las reglas se fusionarán con las instrucciones personalizadas."

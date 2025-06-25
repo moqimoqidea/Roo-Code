@@ -50,15 +50,10 @@
 		"description": "Afegiu directrius de comportament específiques per al mode {{modeName}}.",
 		"loadFromFile": "Les instruccions personalitzades específiques per al mode {{mode}} també es poden carregar des de la carpeta <span>.roo/rules-{{slug}}/</span> al vostre espai de treball (.roorules-{{slug}} i .clinerules-{{slug}} estan obsolets i deixaran de funcionar aviat)."
 	},
-	"consolidateRules": {
-		"title": "Consolidar regles",
-		"description": "Això mou les regles de la carpeta .roo/rules-{{slug}}/ al camp d'instruccions personalitzades. Això no afegeix funcionalitat, sinó que facilita la inclusió d'aquest mode en els fitxers YAML de regles globals i el seu intercanvi amb altres. La carpeta d'origen s'eliminarà després de la consolidació.",
-		"confirmPrompt": "Escriviu \"confirmar\" per continuar:",
-		"confirmPlaceholder": "confirmar",
-		"confirmText": "confirmar",
-		"cancel": "Cancel·lar",
-		"consolidate": "Consolidar regles",
-		"consolidating": "Consolidant..."
+	"exportMode": {
+		"title": "Exportar mode",
+		"description": "Exporta aquest mode a un fitxer YAML amb totes les regles incloses per compartir fàcilment amb altres.",
+		"export": "Exportar mode"
 	},
 	"advanced": {
 		"title": "Avançat"

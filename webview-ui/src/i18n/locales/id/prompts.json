@@ -50,15 +50,10 @@
 		"description": "Tambahkan panduan perilaku khusus untuk mode {{modeName}}.",
 		"loadFromFile": "Instruksi kustom khusus untuk mode {{mode}} juga dapat dimuat dari folder <span>.roo/rules-{{slug}}/</span> di workspace Anda (.roomodes-{{slug}} dan .clinerules-{{slug}} sudah deprecated dan akan segera berhenti bekerja)."
 	},
-	"consolidateRules": {
-		"title": "Konsolidasi Aturan",
-		"description": "Ini memindahkan aturan dari folder .roo/rules-{{slug}}/ ke bidang instruksi kustom. Ini tidak menambahkan fungsionalitas, tetapi membuatnya lebih mudah untuk menyertakan mode ini dalam file YAML aturan global dan membagikannya kepada orang lain. Folder sumber akan dihapus setelah konsolidasi.",
-		"confirmPrompt": "Ketik \"confirm\" untuk melanjutkan:",
-		"confirmPlaceholder": "confirm",
-		"confirmText": "confirm",
-		"cancel": "Batal",
-		"consolidate": "Konsolidasi Aturan",
-		"consolidating": "Mengonsolidasi..."
+	"exportMode": {
+		"title": "Ekspor Mode",
+		"description": "Ekspor mode ini ke file YAML dengan semua aturan yang disertakan untuk berbagi dengan mudah dengan orang lain.",
+		"export": "Ekspor Mode"
 	},
 	"advanced": {
 		"title": "Lanjutan"

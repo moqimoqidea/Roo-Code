@@ -50,15 +50,10 @@
 		"description": "Thêm hướng dẫn hành vi dành riêng cho chế độ {{modeName}}.",
 		"loadFromFile": "Hướng dẫn tùy chỉnh dành riêng cho chế độ {{mode}} cũng có thể được tải từ thư mục <span>.roo/rules-{{slug}}/</span> trong không gian làm việc của bạn (.roorules-{{slug}} và .clinerules-{{slug}} đã lỗi thời và sẽ sớm ngừng hoạt động)."
 	},
-	"consolidateRules": {
-		"title": "Hợp nhất quy tắc",
-		"description": "Thao tác này di chuyển các quy tắc từ thư mục .roo/rules-{{slug}}/ vào trường hướng dẫn tùy chỉnh. Điều này không thêm chức năng, mà giúp dễ dàng đưa chế độ này vào các tệp YAML quy tắc toàn cục và chia sẻ với người khác. Thư mục nguồn sẽ bị xóa sau khi hợp nhất.",
-		"confirmPrompt": "Nhập \"confirm\" để tiếp tục:",
-		"confirmPlaceholder": "confirm",
-		"confirmText": "confirm",
-		"cancel": "Hủy",
-		"consolidate": "Hợp nhất quy tắc",
-		"consolidating": "Đang hợp nhất..."
+	"exportMode": {
+		"title": "Xuất chế độ",
+		"description": "Xuất chế độ này sang tệp YAML với tất cả các quy tắc được bao gồm để dễ dàng chia sẻ với người khác.",
+		"export": "Xuất chế độ"
 	},
 	"globalCustomInstructions": {
 		"title": "Hướng dẫn tùy chỉnh cho tất cả các chế độ",

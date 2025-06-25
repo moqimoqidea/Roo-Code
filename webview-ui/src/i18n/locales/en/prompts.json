@@ -4,11 +4,13 @@
 	"modes": {
 		"title": "Modes",
 		"createNewMode": "Create new mode",
+		"importMode": "Import mode",
 		"editModesConfig": "Edit modes configuration",
 		"editGlobalModes": "Edit Global Modes",
 		"editProjectModes": "Edit Project Modes (.roomodes)",
 		"createModeHelpText": "Modes are specialized personas that tailor Roo's behavior. <0>Learn about Using Modes</0> or <1>Customizing Modes.</1>",
-		"selectMode": "Search modes"
+		"selectMode": "Search modes",
+		"noMatchFound": "No modes found"
 	},
 	"apiConfiguration": {
 		"title": "API Configuration",
@@ -50,15 +52,10 @@
 		"description": "Add behavioral guidelines specific to {{modeName}} mode.",
 		"loadFromFile": "Custom instructions specific to {{mode}} mode can also be loaded from the <span>.roo/rules-{{slug}}/</span> folder in your workspace (.roorules-{{slug}} and .clinerules-{{slug}} are deprecated and will stop working soon)."
 	},
-	"consolidateRules": {
-		"title": "Consolidate Rules",
-		"description": "This moves rules from the .roo/rules-{{slug}}/ folder into the custom instructions field. This doesn't add functionality, but makes it easier to include this mode in global rules YAML files and share it with others. The source folder will be removed after consolidation.",
-		"confirmPrompt": "Type \"confirm\" to proceed:",
-		"confirmPlaceholder": "confirm",
-		"confirmText": "confirm",
-		"cancel": "Cancel",
-		"consolidate": "Consolidate Rules",
-		"consolidating": "Consolidating..."
+	"exportMode": {
+		"title": "Export Mode",
+		"description": "Export this mode with rules from the .roo/rules-{{slug}}/ folder combined into a shareable YAML file. The original files remain unchanged.",
+		"exporting": "Exporting..."
 	},
 	"advanced": {
 		"title": "Advanced"

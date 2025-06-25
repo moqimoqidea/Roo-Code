@@ -175,8 +175,10 @@ export interface WebviewMessage {
 		| "switchTab"
 		| "profileThresholds"
 		| "shareTaskSuccess"
-		| "consolidateRules"
-		| "consolidateRulesResult"
+		| "exportMode"
+		| "exportModeResult"
+		| "importMode"
+		| "importModeResult"
 		| "checkRulesDirectory"
 		| "checkRulesDirectoryResult"
 	text?: string

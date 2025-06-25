@@ -50,15 +50,10 @@
 		"description": "{{modeName}}模式的专属规则",
 		"loadFromFile": "支持从<span>.roo/rules-{{slug}}/</span>目录读取配置（.roorules-{{slug}}和.clinerules-{{slug}}已弃用并将很快停止工作）。"
 	},
-	"consolidateRules": {
-		"title": "合并规则",
-		"description": "这将把 .roo/rules-{{slug}}/ 文件夹中的规则移动到自定义指令字段。这不会增加功能，但会使此模式更容易包含在全局规则 YAML 文件中并与他人共享。合并后源文件夹将被删除。",
-		"confirmPrompt": "输入 \"confirm\" 以继续：",
-		"confirmPlaceholder": "confirm",
-		"confirmText": "confirm",
-		"cancel": "取消",
-		"consolidate": "合并规则",
-		"consolidating": "正在合并..."
+	"exportMode": {
+		"title": "导出模式",
+		"description": "将此模式导出为包含所有规则的 YAML 文件，以便与他人轻松共享。",
+		"export": "导出模式"
 	},
 	"globalCustomInstructions": {
 		"title": "所有模式的自定义指令",

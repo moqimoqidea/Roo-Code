@@ -1,6 +1,6 @@
 import { safeWriteJson } from "../../utils/safeWriteJson"
 import * as path from "path"
-import fs from "fs/promises"
+import * as fs from "fs/promises"
 import pWaitFor from "p-wait-for"
 import * as vscode from "vscode"
 
@@ -1501,27 +1501,47 @@ export const webviewMessageHandler = async (
 				await provider.postStateToWebview()
 			}
 			break
-		case "consolidateRules":
+		case "exportMode":
 			if (message.slug) {
 				try {
-					const result = await provider.customModesManager.consolidateRulesForMode(message.slug)
+					const result = await provider.customModesManager.exportModeWithRules(message.slug)
 
-					if (result.success) {
-						// Update state after consolidating rules
-						const customModes = await provider.customModesManager.getCustomModes()
-						await updateGlobalState("customModes", customModes)
-						await provider.postStateToWebview()
-
-						// Send success message to webview
-						provider.postMessageToWebview({
-							type: "consolidateRulesResult",
-							success: true,
-							slug: message.slug,
+					if (result.success && result.yaml) {
+						// Show save dialog
+						const saveUri = await vscode.window.showSaveDialog({
+							defaultUri: vscode.Uri.file(`${message.slug}-export.yaml`),
+							filters: {
+								"YAML files": ["yaml", "yml"],
+							},
+							title: "Save mode export",
 						})
+
+						if (saveUri) {
+							// Write the file to the selected location
+							await fs.writeFile(saveUri.fsPath, result.yaml, "utf-8")
+
+							// Send success message to webview
+							provider.postMessageToWebview({
+								type: "exportModeResult",
+								success: true,
+								slug: message.slug,
+							})
+
+							// Show info message
+							vscode.window.showInformationMessage(t("common:info.mode_exported", { mode: message.slug }))
+						} else {
+							// User cancelled the save dialog
+							provider.postMessageToWebview({
+								type: "exportModeResult",
+								success: false,
+								error: "Export cancelled",
+								slug: message.slug,
+							})
+						}
 					} else {
 						// Send error message to webview
 						provider.postMessageToWebview({
-							type: "consolidateRulesResult",
+							type: "exportModeResult",
 							success: false,
 							error: result.error,
 							slug: message.slug,
@@ -1529,16 +1549,77 @@ export const webviewMessageHandler = async (
 					}
 				} catch (error) {
 					const errorMessage = error instanceof Error ? error.message : String(error)
-					provider.log(`Failed to consolidate rules for mode ${message.slug}: ${errorMessage}`)
+					provider.log(`Failed to export mode ${message.slug}: ${errorMessage}`)
 
 					// Send error message to webview
 					provider.postMessageToWebview({
-						type: "consolidateRulesResult",
+						type: "exportModeResult",
 						success: false,
 						error: errorMessage,
 						slug: message.slug,
 					})
 				}
+			}
+			break
+		case "importMode":
+			try {
+				// Show file picker to select YAML file
+				const fileUri = await vscode.window.showOpenDialog({
+					canSelectFiles: true,
+					canSelectFolders: false,
+					canSelectMany: false,
+					filters: {
+						"YAML files": ["yaml", "yml"],
+					},
+					title: "Select mode export file to import",
+				})
+
+				if (fileUri && fileUri[0]) {
+					// Read the file content
+					const yamlContent = await fs.readFile(fileUri[0].fsPath, "utf-8")
+
+					// Import the mode
+					const result = await provider.customModesManager.importModeWithRules(yamlContent)
+
+					if (result.success) {
+						// Update state after importing
+						const customModes = await provider.customModesManager.getCustomModes()
+						await updateGlobalState("customModes", customModes)
+						await provider.postStateToWebview()
+
+						// Send success message to webview
+						provider.postMessageToWebview({
+							type: "importModeResult",
+							success: true,
+						})
+
+						// Show success message
+						vscode.window.showInformationMessage(t("common:info.mode_imported"))
+					} else {
+						// Send error message to webview
+						provider.postMessageToWebview({
+							type: "importModeResult",
+							success: false,
+							error: result.error,
+						})
+
+						// Show error message
+						vscode.window.showErrorMessage(t("common:errors.mode_import_failed", { error: result.error }))
+					}
+				}
+			} catch (error) {
+				const errorMessage = error instanceof Error ? error.message : String(error)
+				provider.log(`Failed to import mode: ${errorMessage}`)
+
+				// Send error message to webview
+				provider.postMessageToWebview({
+					type: "importModeResult",
+					success: false,
+					error: errorMessage,
+				})
+
+				// Show error message
+				vscode.window.showErrorMessage(t("common:errors.mode_import_failed", { error: errorMessage }))
 			}
 			break
 		case "checkRulesDirectory":

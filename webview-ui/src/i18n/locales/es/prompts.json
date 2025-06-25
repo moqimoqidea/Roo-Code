@@ -50,15 +50,10 @@
 		"description": "Agrega directrices de comportamiento específicas para el modo {{modeName}}.",
 		"loadFromFile": "Las instrucciones personalizadas para el modo {{mode}} también se pueden cargar desde la carpeta <span>.roo/rules-{{slug}}/</span> en tu espacio de trabajo (.roorules-{{slug}} y .clinerules-{{slug}} están obsoletos y dejarán de funcionar pronto)."
 	},
-	"consolidateRules": {
-		"title": "Consolidar reglas",
-		"description": "Esto mueve las reglas de la carpeta .roo/rules-{{slug}}/ al campo de instrucciones personalizadas. Esto no añade funcionalidad, sino que facilita la inclusión de este modo en los archivos YAML de reglas globales y su compartición con otros. La carpeta de origen se eliminará después de la consolidación.",
-		"confirmPrompt": "Escribe \"confirmar\" para continuar:",
-		"confirmPlaceholder": "confirmar",
-		"confirmText": "confirmar",
-		"cancel": "Cancelar",
-		"consolidate": "Consolidar reglas",
-		"consolidating": "Consolidando..."
+	"exportMode": {
+		"title": "Exportar modo",
+		"description": "Exporta este modo a un archivo YAML con todas las reglas incluidas para compartir fácilmente con otros.",
+		"export": "Exportar modo"
 	},
 	"advanced": {
 		"title": "Avanzado"

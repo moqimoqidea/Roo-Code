@@ -8,7 +8,7 @@ import {
 	VSCodeTextField,
 } from "@vscode/webview-ui-toolkit/react"
 import { Trans } from "react-i18next"
-import { ChevronDown, X } from "lucide-react"
+import { ChevronDown, X, Upload, Download } from "lucide-react"
 
 import { ModeConfig, GroupEntry, PromptComponent, ToolGroup, modeConfigSchema } from "@roo-code/types"
 
@@ -92,11 +92,8 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 	const [showConfigMenu, setShowConfigMenu] = useState(false)
 	const [isCreateModeDialogOpen, setIsCreateModeDialogOpen] = useState(false)
 	const [isSystemPromptDisclosureOpen, setIsSystemPromptDisclosureOpen] = useState(false)
-	const [isConsolidateRulesDialogOpen, setIsConsolidateRulesDialogOpen] = useState(false)
-	const [consolidateRulesMode, setConsolidateRulesMode] = useState<string>("")
-	const [isConsolidating, setIsConsolidating] = useState(false)
-	const [hasRulesToConsolidate, setHasRulesToConsolidate] = useState<Record<string, boolean>>({})
-	const [consolidateConfirmText, setConsolidateConfirmText] = useState("")
+	const [isExporting, setIsExporting] = useState(false)
+	const [hasRulesToExport, setHasRulesToExport] = useState<Record<string, boolean>>({})
 
 	// State for mode selection popover and search
 	const [open, setOpen] = useState(false)
@@ -195,7 +192,7 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 		return customModes?.find(findMode) || modes.find(findMode)
 	}, [visualMode, customModes, modes])
 
-	// Check if the current mode has rules to consolidate
+	// Check if the current mode has rules to export
 	const checkRulesDirectory = useCallback((slug: string) => {
 		vscode.postMessage({
 			type: "checkRulesDirectory",
@@ -206,10 +203,10 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 	// Check rules directory when mode changes
 	useEffect(() => {
 		const currentMode = getCurrentMode()
-		if (currentMode?.slug && hasRulesToConsolidate[currentMode.slug] === undefined) {
+		if (currentMode?.slug && hasRulesToExport[currentMode.slug] === undefined) {
 			checkRulesDirectory(currentMode.slug)
 		}
-	}, [getCurrentMode, checkRulesDirectory, hasRulesToConsolidate])
+	}, [getCurrentMode, checkRulesDirectory, hasRulesToExport])
 
 	// Helper function to safely access mode properties
 	const getModeProperty = <T extends keyof ModeConfig>(
@@ -418,25 +415,15 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 					setSelectedPromptTitle(`System Prompt (${message.mode} mode)`)
 					setIsDialogOpen(true)
 				}
-			} else if (message.type === "consolidateRulesResult") {
-				setIsConsolidating(false)
-				setIsConsolidateRulesDialogOpen(false)
-				setConsolidateConfirmText("")
+			} else if (message.type === "exportModeResult") {
+				setIsExporting(false)
 
-				if (message.success) {
-					// Success - update the state to reflect rules are no longer available
-					setHasRulesToConsolidate((prev) => ({
-						...prev,
-						[consolidateRulesMode]: false,
-					}))
-				} else {
+				if (!message.success) {
 					// Show error message
-					console.error("Failed to consolidate rules:", message.error)
+					console.error("Failed to export mode:", message.error)
 				}
-
-				setConsolidateRulesMode("")
 			} else if (message.type === "checkRulesDirectoryResult") {
-				setHasRulesToConsolidate((prev) => ({
+				setHasRulesToExport((prev) => ({
 					...prev,
 					[message.slug]: message.hasContent,
 				}))
@@ -445,7 +432,7 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 
 		window.addEventListener("message", handler)
 		return () => window.removeEventListener("message", handler)
-	}, [consolidateRulesMode])
+	}, [])
 
 	const handleAgentReset = (
 		modeSlug: string,
@@ -1076,7 +1063,7 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 				</div>
 
 				<div className="pb-4 border-b border-vscode-input-border">
-					<div className="flex gap-2">
+					<div className="flex gap-2 mb-4">
 						<Button
 							variant="default"
 							onClick={() => {
@@ -1109,6 +1096,53 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 							</Button>
 						</StandardTooltip>
 					</div>
+
+					{/* Export/Import Mode Buttons */}
+					{(() => {
+						const currentMode = getCurrentMode()
+						const hasRules = currentMode?.slug && hasRulesToExport[currentMode.slug]
+						const isCustomMode = currentMode && findModeBySlug(currentMode.slug, customModes)
+
+						// Show export button if mode has rules or is a custom mode
+						if (hasRules || isCustomMode) {
+							return (
+								<div className="flex flex-wrap items-center gap-2 mb-4">
+									<Button
+										onClick={() => {
+											if (currentMode?.slug) {
+												setIsExporting(true)
+												vscode.postMessage({
+													type: "exportMode",
+													slug: currentMode.slug,
+												})
+											}
+										}}
+										disabled={isExporting}
+										className="w-28"
+										title={t("prompts:exportMode.title")}
+										data-testid="export-mode-button">
+										<Upload className="p-0.5" />
+										{isExporting
+											? t("prompts:exportMode.exporting")
+											: t("prompts:exportMode.title")}
+									</Button>
+									<Button
+										onClick={() => {
+											vscode.postMessage({
+												type: "importMode",
+											})
+										}}
+										className="w-28"
+										title={t("prompts:modes.importMode")}
+										data-testid="import-mode-button">
+										<Download className="p-0.5" />
+										{t("prompts:modes.importMode")}
+									</Button>
+								</div>
+							)
+						}
+						return null
+					})()}
 
 					{/* Advanced Features Disclosure */}
 					<div className="mt-4">
@@ -1166,39 +1200,6 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 										/>
 									</div>
 								</div>
-
-								{/* Consolidate Rules Section */}
-								{(() => {
-									const currentMode = getCurrentMode()
-									const hasRules = currentMode?.slug && hasRulesToConsolidate[currentMode.slug]
-									return hasRules ? (
-										<div>
-											<h4 className="text-xs font-semibold text-vscode-foreground mb-2">
-												Consolidate Rules
-											</h4>
-											<div className="text-xs text-vscode-descriptionForeground mb-2">
-												{t("prompts:consolidateRules.description", {
-													slug: currentMode?.slug || "this-mode",
-												})}
-											</div>
-											<Button
-												variant="ghost"
-												size="sm"
-												onClick={() => {
-													if (currentMode?.slug) {
-														setConsolidateRulesMode(currentMode.slug)
-														setConsolidateConfirmText("")
-														setIsConsolidateRulesDialogOpen(true)
-													}
-												}}
-												title={t("prompts:consolidateRules.title")}
-												data-testid="consolidate-rules-button">
-												<span className="codicon codicon-merge mr-1"></span>
-												{t("prompts:consolidateRules.title")}
-											</Button>
-										</div>
-									) : null
-								})()}
 							</div>
 						)}
 					</div>
@@ -1473,61 +1474,6 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 						<div className="flex justify-end p-3 px-5 border-t border-vscode-editor-lineHighlightBorder bg-vscode-editor-background">
 							<Button variant="secondary" onClick={() => setIsDialogOpen(false)}>
 								{t("prompts:createModeDialog.close")}
-							</Button>
-						</div>
-					</div>
-				</div>
-			)}
-
-			{/* Consolidate Rules Confirmation Dialog */}
-			{isConsolidateRulesDialogOpen && (
-				<div className="fixed inset-0 flex items-center justify-center bg-black/50 z-[1000]">
-					<div className="bg-vscode-editor-background border border-vscode-input-border rounded shadow-md p-5 max-w-md mx-4">
-						<h3 className="text-vscode-foreground mb-3">{t("prompts:consolidateRules.title")}</h3>
-						<p className="text-sm text-vscode-descriptionForeground mb-4">
-							{t("prompts:consolidateRules.description", { slug: consolidateRulesMode })}
-						</p>
-						<div className="mb-4">
-							<div className="text-sm text-vscode-descriptionForeground mb-2">
-								{t("prompts:consolidateRules.confirmPrompt")}
-							</div>
-							<Input
-								type="text"
-								value={consolidateConfirmText}
-								onChange={(e) => setConsolidateConfirmText(e.target.value)}
-								placeholder={t("prompts:consolidateRules.confirmPlaceholder")}
-								className="w-full"
-								disabled={isConsolidating}
-							/>
-						</div>
-						<div className="flex justify-end gap-2">
-							<Button
-								variant="secondary"
-								onClick={() => {
-									setIsConsolidateRulesDialogOpen(false)
-									setConsolidateRulesMode("")
-									setConsolidateConfirmText("")
-								}}
-								disabled={isConsolidating}>
-								{t("prompts:consolidateRules.cancel")}
-							</Button>
-							<Button
-								variant="default"
-								onClick={() => {
-									setIsConsolidating(true)
-									vscode.postMessage({
-										type: "consolidateRules",
-										slug: consolidateRulesMode,
-									})
-								}}
-								disabled={
-									isConsolidating ||
-									consolidateConfirmText.toLowerCase() !==
-										t("prompts:consolidateRules.confirmText").toLowerCase()
-								}>
-								{isConsolidating
-									? t("prompts:consolidateRules.consolidating")
-									: t("prompts:consolidateRules.consolidate")}
 							</Button>
 						</div>
 					</div>

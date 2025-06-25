@@ -583,7 +583,7 @@ export class CustomModesManager {
 		}
 	}
 
-	public async consolidateRulesForMode(slug: string): Promise<{ success: boolean; error?: string }> {
+	public async exportModeWithRules(slug: string): Promise<{ success: boolean; yaml?: string; error?: string }> {
 		try {
 			// Get all current modes
 			const allModes = await this.getCustomModes()
@@ -626,73 +626,108 @@ export class CustomModesManager {
 			// Check for .roo/rules-{slug}/ directory
 			const modeRulesDir = path.join(workspacePath, ".roo", `rules-${slug}`)
 
+			let rulesFiles: Array<{ relativePath: string; content: string }> = []
 			try {
 				const stats = await fs.stat(modeRulesDir)
-				if (!stats.isDirectory()) {
-					return { success: false, error: "Rules directory not found" }
-				}
-			} catch (error) {
-				return { success: false, error: "Rules directory not found" }
-			}
+				if (stats.isDirectory()) {
+					// Extract content specific to this mode by looking for the mode-specific rules
+					const entries = await fs.readdir(modeRulesDir, { withFileTypes: true, recursive: true })
 
-			// Extract content specific to this mode by looking for the mode-specific rules
-			let modeSpecificRules = ""
-			try {
-				const entries = await fs.readdir(modeRulesDir, { withFileTypes: true, recursive: true })
-				const files: Array<{ filename: string; content: string }> = []
-
-				for (const entry of entries) {
-					if (entry.isFile()) {
-						const filePath = path.join(entry.parentPath || modeRulesDir, entry.name)
-						const content = await fs.readFile(filePath, "utf-8")
-						if (content.trim()) {
-							files.push({ filename: filePath, content: content.trim() })
+					for (const entry of entries) {
+						if (entry.isFile()) {
+							const filePath = path.join(entry.parentPath || modeRulesDir, entry.name)
+							const content = await fs.readFile(filePath, "utf-8")
+							if (content.trim()) {
+								// Calculate relative path from .roo directory
+								const relativePath = path.relative(path.join(workspacePath, ".roo"), filePath)
+								rulesFiles.push({ relativePath, content: content.trim() })
+							}
 						}
 					}
 				}
-
-				if (files.length === 0) {
-					return { success: false, error: "No rule files found in the directory" }
-				}
-
-				// Format the content without filename headers to avoid confusing the LLM
-				modeSpecificRules = files.map((file) => file.content).join("\n\n")
 			} catch (error) {
-				return { success: false, error: "Failed to read rule files" }
+				// Directory doesn't exist, which is fine - mode might not have rules
 			}
 
-			if (!modeSpecificRules) {
-				return { success: false, error: "No rule content found" }
-			}
-
-			// Combine existing custom instructions with the consolidated rules
-			const existingInstructions = mode.customInstructions || ""
-			const separator = existingInstructions ? "\n\n" : ""
-			const newInstructions = existingInstructions + separator + modeSpecificRules
-
-			// Update the mode with the new instructions
-			const updatedMode: ModeConfig = {
+			// Create an export mode with rules files preserved
+			const exportMode: ModeConfig & { rulesFiles?: Array<{ relativePath: string; content: string }> } = {
 				...mode,
-				customInstructions: newInstructions,
+				// Remove source property for export
+				source: undefined as any,
 			}
 
-			await this.updateCustomMode(slug, updatedMode)
+			// Add rules files if any exist
+			if (rulesFiles.length > 0) {
+				exportMode.rulesFiles = rulesFiles
+			}
 
-			// Remove the source directory after successful consolidation
-			try {
-				await fs.rm(modeRulesDir, { recursive: true, force: true })
-			} catch (removeError) {
-				// Log the error but don't fail the operation since consolidation was successful
-				logger.error("Warning: Could not remove rules directory after consolidation", {
-					directory: modeRulesDir,
-					error: removeError instanceof Error ? removeError.message : String(removeError),
+			// Generate YAML
+			const exportData = {
+				customModes: [exportMode],
+			}
+
+			const yamlContent = yaml.stringify(exportData)
+
+			return { success: true, yaml: yamlContent }
+		} catch (error) {
+			const errorMessage = error instanceof Error ? error.message : String(error)
+			logger.error("Failed to export mode with rules", { slug, error: errorMessage })
+			return { success: false, error: errorMessage }
+		}
+	}
+
+	public async importModeWithRules(yamlContent: string): Promise<{ success: boolean; error?: string }> {
+		try {
+			// Parse the YAML content
+			const importData = yaml.parse(yamlContent)
+
+			if (
+				!importData?.customModes ||
+				!Array.isArray(importData.customModes) ||
+				importData.customModes.length === 0
+			) {
+				return { success: false, error: "Invalid import format: no custom modes found" }
+			}
+
+			const workspacePath = getWorkspacePath()
+			if (!workspacePath) {
+				return { success: false, error: "No workspace found" }
+			}
+
+			// Process each mode in the import
+			for (const importMode of importData.customModes) {
+				const { rulesFiles, ...modeConfig } = importMode
+
+				// Import the mode configuration
+				await this.updateCustomMode(importMode.slug, {
+					...modeConfig,
+					source: "project", // Always import as project mode
 				})
+
+				// Import rules files if they exist
+				if (rulesFiles && Array.isArray(rulesFiles)) {
+					for (const ruleFile of rulesFiles) {
+						if (ruleFile.relativePath && ruleFile.content) {
+							const targetPath = path.join(workspacePath, ".roo", ruleFile.relativePath)
+
+							// Ensure directory exists
+							const targetDir = path.dirname(targetPath)
+							await fs.mkdir(targetDir, { recursive: true })
+
+							// Write the file
+							await fs.writeFile(targetPath, ruleFile.content, "utf-8")
+						}
+					}
+				}
 			}
+
+			// Refresh the modes after import
+			await this.refreshMergedState()
 
 			return { success: true }
 		} catch (error) {
 			const errorMessage = error instanceof Error ? error.message : String(error)
-			logger.error("Failed to consolidate rules for mode", { slug, error: errorMessage })
+			logger.error("Failed to import mode with rules", { error: errorMessage })
 			return { success: false, error: errorMessage }
 		}
 	}

@@ -701,6 +701,14 @@ export class CustomModesManager {
 				return { success: false, error: "Invalid import format: no custom modes found" }
 			}
 
+			// Check workspace availability early if importing at project level
+			if (source === "project") {
+				const workspacePath = getWorkspacePath()
+				if (!workspacePath) {
+					return { success: false, error: "No workspace found" }
+				}
+			}
+
 			// Process each mode in the import
 			for (const importMode of importData.customModes) {
 				const { rulesFiles, ...modeConfig } = importMode
@@ -714,9 +722,6 @@ export class CustomModesManager {
 				// Only import rules files for project-level imports
 				if (source === "project" && rulesFiles && Array.isArray(rulesFiles)) {
 					const workspacePath = getWorkspacePath()
-					if (!workspacePath) {
-						return { success: false, error: "No workspace found" }
-					}
 
 					// First, remove the existing rules folder for this mode if it exists
 					const rulesFolderPath = path.join(workspacePath, ".roo", `rules-${importMode.slug}`)

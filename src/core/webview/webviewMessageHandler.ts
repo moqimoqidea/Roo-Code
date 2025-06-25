@@ -3,6 +3,7 @@ import * as path from "path"
 import * as fs from "fs/promises"
 import pWaitFor from "p-wait-for"
 import * as vscode from "vscode"
+import * as yaml from "yaml"
 
 import { type Language, type ProviderSettings, type GlobalState, TelemetryEventName } from "@roo-code/types"
 import { CloudService } from "@roo-code/cloud"
@@ -1504,9 +1505,36 @@ export const webviewMessageHandler = async (
 		case "exportMode":
 			if (message.slug) {
 				try {
+					// Get custom mode prompts to check if built-in mode has been customized
+					const customModePrompts = getGlobalState("customModePrompts") || {}
+					const customPrompt = customModePrompts[message.slug]
+
+					// Export the mode with any customizations
 					const result = await provider.customModesManager.exportModeWithRules(message.slug)
 
 					if (result.success && result.yaml) {
+						// If there are custom prompts for this mode, merge them into the export
+						if (customPrompt && result.yaml) {
+							try {
+								const exportData = yaml.parse(result.yaml)
+								if (exportData.customModes && exportData.customModes[0]) {
+									// Merge custom prompt data into the mode
+									const mode = exportData.customModes[0]
+									if (customPrompt.roleDefinition) mode.roleDefinition = customPrompt.roleDefinition
+									if (customPrompt.description) mode.description = customPrompt.description
+									if (customPrompt.whenToUse) mode.whenToUse = customPrompt.whenToUse
+									if (customPrompt.customInstructions)
+										mode.customInstructions = customPrompt.customInstructions
+
+									// Re-stringify the updated data
+									result.yaml = yaml.stringify(exportData)
+								}
+							} catch (error) {
+								// If parsing fails, continue with original yaml
+								provider.log(`Failed to merge custom prompts into export: ${error}`)
+							}
+						}
+
 						// Get last used directory for export
 						const lastExportPath = getGlobalState("lastModeExportPath")
 						let defaultUri: vscode.Uri
@@ -1536,7 +1564,7 @@ export const webviewMessageHandler = async (
 							title: "Save mode export",
 						})
 
-						if (saveUri) {
+						if (saveUri && result.yaml) {
 							// Save the directory for next time
 							await updateGlobalState("lastModeExportPath", saveUri.fsPath)
 

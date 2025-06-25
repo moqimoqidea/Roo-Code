@@ -585,11 +585,14 @@ export class CustomModesManager {
 
 	public async exportModeWithRules(slug: string): Promise<{ success: boolean; yaml?: string; error?: string }> {
 		try {
+			// Import modes from shared to check built-in modes
+			const { modes: builtInModes } = await import("../../shared/modes")
+
 			// Get all current modes
 			const allModes = await this.getCustomModes()
 			let mode = allModes.find((m) => m.slug === slug)
 
-			// If mode not found in custom modes, check if it's a built-in mode that has been customized in .roomodes
+			// If mode not found in custom modes, check if it's a built-in mode that has been customized
 			if (!mode) {
 				const workspacePath = getWorkspacePath()
 				if (!workspacePath) {
@@ -606,14 +609,20 @@ export class CustomModesManager {
 
 						// Find the mode in .roomodes
 						mode = roomodesModes.find((m: any) => m.slug === slug)
-						if (!mode) {
-							return { success: false, error: "Mode not found in custom modes or .roomodes" }
-						}
+					}
+				} catch (error) {
+					// Continue to check built-in modes
+				}
+
+				// If still not found, check if it's a built-in mode
+				if (!mode) {
+					const builtInMode = builtInModes.find((m) => m.slug === slug)
+					if (builtInMode) {
+						// Use the built-in mode as the base
+						mode = { ...builtInMode }
 					} else {
 						return { success: false, error: "Mode not found" }
 					}
-				} catch (error) {
-					return { success: false, error: "Mode not found" }
 				}
 			}
 

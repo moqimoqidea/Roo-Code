@@ -1099,45 +1099,38 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 
 					{/* Export/Import Mode Buttons */}
 					<div className="flex items-center gap-2">
-						{(() => {
-							const currentMode = getCurrentMode()
-							// Show export button only when a mode is selected
-							if (currentMode) {
-								return (
-									<Button
-										onClick={() => {
-											if (currentMode?.slug) {
-												setIsExporting(true)
-												vscode.postMessage({
-													type: "exportMode",
-													slug: currentMode.slug,
-												})
-											}
-										}}
-										disabled={isExporting}
-										className="w-28"
-										title={t("prompts:exportMode.title")}
-										data-testid="export-mode-button">
-										<Upload className="mr-1 h-4 w-4" />
-										{isExporting
-											? t("prompts:exportMode.exporting")
-											: t("prompts:exportMode.title")}
-									</Button>
-								)
-							}
-							return null
-						})()}
-						{/* Import button is always visible */}
+						{/* Export button - visible when any mode is selected */}
+						{getCurrentMode() && (
+							<Button
+								variant="default"
+								onClick={() => {
+									const currentMode = getCurrentMode()
+									if (currentMode?.slug) {
+										setIsExporting(true)
+										vscode.postMessage({
+											type: "exportMode",
+											slug: currentMode.slug,
+										})
+									}
+								}}
+								disabled={isExporting}
+								title={t("prompts:exportMode.title")}
+								data-testid="export-mode-button">
+								<Upload className="h-4 w-4" />
+								{isExporting ? t("prompts:exportMode.exporting") : t("prompts:exportMode.title")}
+							</Button>
+						)}
+						{/* Import button - always visible */}
 						<Button
+							variant="default"
 							onClick={() => {
 								vscode.postMessage({
 									type: "importMode",
 								})
 							}}
-							className="w-28"
 							title={t("prompts:modes.importMode")}
 							data-testid="import-mode-button">
-							<Download className="mr-1 h-4 w-4" />
+							<Download className="h-4 w-4" />
 							{t("prompts:modes.importMode")}
 						</Button>
 					</div>

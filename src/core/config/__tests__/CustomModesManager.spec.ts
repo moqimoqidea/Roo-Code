@@ -1034,6 +1034,113 @@ describe("CustomModesManager", () => {
 				expect(result.success).toBe(false)
 				expect(result.error).toContain("Permission denied")
 			})
+
+			it("should remove existing rules folder when importing mode without rules", async () => {
+				const importYaml = yaml.stringify({
+					customModes: [
+						{
+							slug: "test-mode",
+							name: "Test Mode",
+							roleDefinition: "Test Role",
+							groups: ["read"],
+							// No rulesFiles property - this mode has no rules
+						},
+					],
+				})
+
+				let roomodesContent: any = null
+				;(fs.readFile as Mock).mockImplementation(async (path: string) => {
+					if (path === mockSettingsPath) {
+						return yaml.stringify({ customModes: [] })
+					}
+					if (path === mockRoomodes && roomodesContent) {
+						return yaml.stringify(roomodesContent)
+					}
+					throw new Error("File not found")
+				})
+				;(fs.writeFile as Mock).mockImplementation(async (path: string, content: string) => {
+					if (path === mockRoomodes) {
+						roomodesContent = yaml.parse(content)
+					}
+					return Promise.resolve()
+				})
+				;(fs.rm as Mock).mockResolvedValue(undefined)
+
+				const result = await manager.importModeWithRules(importYaml)
+
+				expect(result.success).toBe(true)
+
+				// Verify that fs.rm was called to remove the existing rules folder
+				expect(fs.rm).toHaveBeenCalledWith(expect.stringContaining(path.join(".roo", "rules-test-mode")), {
+					recursive: true,
+					force: true,
+				})
+
+				// Verify mode was imported
+				expect(fs.writeFile).toHaveBeenCalledWith(
+					expect.stringContaining(".roomodes"),
+					expect.stringContaining("test-mode"),
+					"utf-8",
+				)
+			})
+
+			it("should remove existing rules folder and create new ones when importing mode with rules", async () => {
+				const importYaml = yaml.stringify({
+					customModes: [
+						{
+							slug: "test-mode",
+							name: "Test Mode",
+							roleDefinition: "Test Role",
+							groups: ["read"],
+							rulesFiles: [
+								{
+									relativePath: "rules-test-mode/new-rule.md",
+									content: "New rule content",
+								},
+							],
+						},
+					],
+				})
+
+				let roomodesContent: any = null
+				let writtenFiles: Record<string, string> = {}
+				;(fs.readFile as Mock).mockImplementation(async (path: string) => {
+					if (path === mockSettingsPath) {
+						return yaml.stringify({ customModes: [] })
+					}
+					if (path === mockRoomodes && roomodesContent) {
+						return yaml.stringify(roomodesContent)
+					}
+					throw new Error("File not found")
+				})
+				;(fs.writeFile as Mock).mockImplementation(async (path: string, content: string) => {
+					if (path === mockRoomodes) {
+						roomodesContent = yaml.parse(content)
+					} else {
+						writtenFiles[path] = content
+					}
+					return Promise.resolve()
+				})
+				;(fs.rm as Mock).mockResolvedValue(undefined)
+				;(fs.mkdir as Mock).mockResolvedValue(undefined)
+
+				const result = await manager.importModeWithRules(importYaml)
+
+				expect(result.success).toBe(true)
+
+				// Verify that fs.rm was called to remove the existing rules folder
+				expect(fs.rm).toHaveBeenCalledWith(expect.stringContaining(path.join(".roo", "rules-test-mode")), {
+					recursive: true,
+					force: true,
+				})
+
+				// Verify new rules files were created
+				expect(fs.mkdir).toHaveBeenCalledWith(expect.stringContaining("rules-test-mode"), { recursive: true })
+
+				// Verify file contents
+				const newRulePath = Object.keys(writtenFiles).find((p) => p.includes("new-rule.md"))
+				expect(writtenFiles[newRulePath!]).toBe("New rule content")
+			})
 		})
 	})
 

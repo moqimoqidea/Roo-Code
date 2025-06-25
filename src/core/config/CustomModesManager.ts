@@ -719,11 +719,12 @@ export class CustomModesManager {
 					source: source, // Use the provided source parameter
 				})
 
-				// Only import rules files for project-level imports
-				if (source === "project" && rulesFiles && Array.isArray(rulesFiles)) {
+				// Handle project-level imports
+				if (source === "project") {
 					const workspacePath = getWorkspacePath()
 
-					// First, remove the existing rules folder for this mode if it exists
+					// Always remove the existing rules folder for this mode if it exists
+					// This ensures that if the imported mode has no rules, the folder is cleaned up
 					const rulesFolderPath = path.join(workspacePath, ".roo", `rules-${importMode.slug}`)
 					try {
 						await fs.rm(rulesFolderPath, { recursive: true, force: true })
@@ -733,17 +734,20 @@ export class CustomModesManager {
 						logger.debug(`No existing rules folder to remove for mode ${importMode.slug}`)
 					}
 
-					// Now import the new rules files
-					for (const ruleFile of rulesFiles) {
-						if (ruleFile.relativePath && ruleFile.content) {
-							const targetPath = path.join(workspacePath, ".roo", ruleFile.relativePath)
+					// Only create new rules files if they exist in the import
+					if (rulesFiles && Array.isArray(rulesFiles) && rulesFiles.length > 0) {
+						// Import the new rules files
+						for (const ruleFile of rulesFiles) {
+							if (ruleFile.relativePath && ruleFile.content) {
+								const targetPath = path.join(workspacePath, ".roo", ruleFile.relativePath)
 
-							// Ensure directory exists
-							const targetDir = path.dirname(targetPath)
-							await fs.mkdir(targetDir, { recursive: true })
+								// Ensure directory exists
+								const targetDir = path.dirname(targetPath)
+								await fs.mkdir(targetDir, { recursive: true })
 
-							// Write the file
-							await fs.writeFile(targetPath, ruleFile.content, "utf-8")
+								// Write the file
+								await fs.writeFile(targetPath, ruleFile.content, "utf-8")
+							}
 						}
 					}
 				} else if (source === "global" && rulesFiles && Array.isArray(rulesFiles)) {

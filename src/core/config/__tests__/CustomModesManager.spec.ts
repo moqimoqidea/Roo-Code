@@ -48,7 +48,8 @@ describe("CustomModesManager", () => {
 	// Use path.sep to ensure correct path separators for the current platform
 	const mockStoragePath = `${path.sep}mock${path.sep}settings`
 	const mockSettingsPath = path.join(mockStoragePath, "settings", GlobalFileNames.customModes)
-	const mockRoomodes = `${path.sep}mock${path.sep}workspace${path.sep}.roomodes`
+	const mockWorkspacePath = path.resolve("/mock/workspace")
+	const mockRoomodes = path.join(mockWorkspacePath, ".roomodes")
 
 	beforeEach(() => {
 		mockOnUpdate = vi.fn()
@@ -64,7 +65,7 @@ describe("CustomModesManager", () => {
 			},
 		} as unknown as vscode.ExtensionContext
 
-		const mockWorkspacePath = path.resolve("/mock/workspace")
+		// mockWorkspacePath is now defined at the top level
 		mockWorkspaceFolders = [{ uri: { fsPath: mockWorkspacePath } }]
 		;(vscode.workspace as any).workspaceFolders = mockWorkspaceFolders
 		;(vscode.workspace.onDidSaveTextDocument as Mock).mockReturnValue({ dispose: vi.fn() })

@@ -64,10 +64,11 @@ describe("CustomModesManager", () => {
 			},
 		} as unknown as vscode.ExtensionContext
 
-		mockWorkspaceFolders = [{ uri: { fsPath: "/mock/workspace" } }]
+		const mockWorkspacePath = path.resolve("/mock/workspace")
+		mockWorkspaceFolders = [{ uri: { fsPath: mockWorkspacePath } }]
 		;(vscode.workspace as any).workspaceFolders = mockWorkspaceFolders
 		;(vscode.workspace.onDidSaveTextDocument as Mock).mockReturnValue({ dispose: vi.fn() })
-		;(getWorkspacePath as Mock).mockReturnValue("/mock/workspace")
+		;(getWorkspacePath as Mock).mockReturnValue(mockWorkspacePath)
 		;(fileExistsAtPath as Mock).mockImplementation(async (path: string) => {
 			return path === mockSettingsPath || path === mockRoomodes
 		})
@@ -1079,17 +1080,18 @@ describe("CustomModesManager", () => {
 				expect(result.success).toBe(true)
 
 				// Verify that no files were written outside the .roo directory
+				const mockWorkspacePath = path.resolve("/mock/workspace")
 				const writtenRuleFiles = writtenFiles.filter((p) => !p.includes(".roomodes"))
 				writtenRuleFiles.forEach((filePath) => {
 					const normalizedPath = path.normalize(filePath)
-					const expectedBasePath = path.normalize(path.join("/mock/workspace", ".roo"))
+					const expectedBasePath = path.normalize(path.join(mockWorkspacePath, ".roo"))
 					expect(normalizedPath.startsWith(expectedBasePath)).toBe(true)
 				})
 
 				// Verify that malicious paths were not written
 				expect(writtenFiles.some((p) => p.includes("etc/passwd"))).toBe(false)
 				expect(writtenFiles.some((p) => p.includes("sensitive.txt"))).toBe(false)
-				expect(writtenFiles.some((p) => path.isAbsolute(p) && !p.startsWith("/mock/workspace"))).toBe(false)
+				expect(writtenFiles.some((p) => path.isAbsolute(p) && !p.startsWith(mockWorkspacePath))).toBe(false)
 			})
 
 			it("should handle malformed YAML gracefully", async () => {

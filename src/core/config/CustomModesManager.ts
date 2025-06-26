@@ -13,7 +13,6 @@ import { logger } from "../../utils/logging"
 import { GlobalFileNames } from "../../shared/globalFileNames"
 import { ensureSettingsDirectoryExists } from "../../utils/globalContext"
 import { t } from "../../i18n"
-import { loadRuleFiles } from "../prompts/sections/custom-instructions"
 
 const ROOMODES_FILENAME = ".roomodes"
 

@@ -686,6 +686,8 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 							experiments={experiments}
 							codebaseIndexModels={codebaseIndexModels}
 							codebaseIndexConfig={codebaseIndexConfig}
+							codebaseIndexEnabled={codebaseIndexConfig?.codebaseIndexEnabled}
+							setCachedStateField={setCachedStateField}
 						/>
 					)}
 

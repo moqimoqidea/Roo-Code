@@ -1,6 +1,5 @@
 import React, { useState, useCallback, useEffect } from "react"
-import { VSCodeButton, VSCodeCheckbox, VSCodeTextField, VSCodeLink } from "@vscode/webview-ui-toolkit/react"
-import { Trans } from "react-i18next"
+import { VSCodeButton, VSCodeTextField } from "@vscode/webview-ui-toolkit/react"
 import * as ProgressPrimitive from "@radix-ui/react-progress"
 
 import { CodebaseIndexConfig, CodebaseIndexModels } from "@roo-code/types"
@@ -8,7 +7,6 @@ import { EmbedderProvider } from "@roo/embeddingModels"
 
 import { vscode } from "@src/utils/vscode"
 import { useAppTranslation } from "@src/i18n/TranslationContext"
-import { buildDocLink } from "@src/utils/docLinks"
 
 import {
 	Select,
@@ -34,7 +32,6 @@ interface CodeIndexSettingsProps {
 
 interface LocalCodeIndexSettings {
 	// Global state settings
-	codebaseIndexEnabled: boolean
 	codebaseIndexQdrantUrl: string
 	codebaseIndexEmbedderProvider: EmbedderProvider
 	codebaseIndexEmbedderBaseUrl?: string
@@ -59,7 +56,6 @@ export const CodeIndexSettings: React.FC<CodeIndexSettingsProps> = ({ codebaseIn
 
 	const [localSettings, setLocalSettings] = useState<LocalCodeIndexSettings>({
 		// Global state settings
-		codebaseIndexEnabled: codebaseIndexConfig?.codebaseIndexEnabled || false,
 		codebaseIndexQdrantUrl: codebaseIndexConfig?.codebaseIndexQdrantUrl || "http://localhost:6333",
 		codebaseIndexEmbedderProvider: codebaseIndexConfig?.codebaseIndexEmbedderProvider || "openai",
 		codebaseIndexEmbedderBaseUrl: codebaseIndexConfig?.codebaseIndexEmbedderBaseUrl || "",
@@ -98,7 +94,6 @@ export const CodeIndexSettings: React.FC<CodeIndexSettingsProps> = ({ codebaseIn
 		if (codebaseIndexConfig) {
 			setLocalSettings((prev) => ({
 				...prev,
-				codebaseIndexEnabled: codebaseIndexConfig.codebaseIndexEnabled || false,
 				codebaseIndexQdrantUrl: codebaseIndexConfig.codebaseIndexQdrantUrl || "http://localhost:6333",
 				codebaseIndexEmbedderProvider: codebaseIndexConfig.codebaseIndexEmbedderProvider || "openai",
 				codebaseIndexEmbedderBaseUrl: codebaseIndexConfig.codebaseIndexEmbedderBaseUrl || "",
@@ -168,7 +163,6 @@ export const CodeIndexSettings: React.FC<CodeIndexSettingsProps> = ({ codebaseIn
 		// Only send fields that have been modified
 		const settingsToSave: any = {
 			// Always include non-secret settings
-			codebaseIndexEnabled: localSettings.codebaseIndexEnabled,
 			codebaseIndexQdrantUrl: localSettings.codebaseIndexQdrantUrl,
 			codebaseIndexEmbedderProvider: localSettings.codebaseIndexEmbedderProvider,
 			codebaseIndexEmbedderBaseUrl: localSettings.codebaseIndexEmbedderBaseUrl,
@@ -254,16 +248,12 @@ export const CodeIndexSettings: React.FC<CodeIndexSettingsProps> = ({ codebaseIn
 	return (
 		<>
 			<div>
-				<div className="flex items-center justify-between">
+				<div className="flex items-center justify-between mb-3">
 					<div className="flex items-center gap-2">
-						<VSCodeCheckbox
-							checked={localSettings.codebaseIndexEnabled}
-							onChange={(e: any) => updateSetting("codebaseIndexEnabled", e.target.checked)}>
-							<span className="font-medium">{t("settings:codeIndex.enableLabel")}</span>
-						</VSCodeCheckbox>
+						<h4 className="font-medium m-0">{t("settings:codeIndex.settingsTitle")}</h4>
 					</div>
 
-					{/* Save Settings Section - Moved to top right */}
+					{/* Save Settings Section */}
 					<div className="flex gap-2 items-center">
 						<VSCodeButton onClick={saveSettings} disabled={saveStatus === "saving" || !hasUnsavedChanges}>
 							{saveStatus === "saving" ? "Saving..." : "Save Settings"}
@@ -278,17 +268,10 @@ export const CodeIndexSettings: React.FC<CodeIndexSettingsProps> = ({ codebaseIn
 						)}
 					</div>
 				</div>
-				<p className="text-vscode-descriptionForeground text-sm mt-0">
-					<Trans i18nKey="settings:codeIndex.enableDescription">
-						<VSCodeLink
-							href={buildDocLink("features/experimental/codebase-indexing", "settings")}
-							style={{ display: "inline" }}></VSCodeLink>
-					</Trans>
-				</p>
 			</div>
 
-			{localSettings.codebaseIndexEnabled && (
-				<div className="flex flex-col gap-3 pl-3 border-l-2 border-vscode-button-background">
+			{codebaseIndexConfig?.codebaseIndexEnabled && (
+				<div className="flex flex-col gap-3">
 					<div className="text-sm text-vscode-descriptionForeground">
 						<span
 							className={`
@@ -554,6 +537,12 @@ export const CodeIndexSettings: React.FC<CodeIndexSettingsProps> = ({ codebaseIn
 							{t("settings:codeIndex.unsavedSettingsMessage")}
 						</p>
 					)}
+				</div>
+			)}
+
+			{!codebaseIndexConfig?.codebaseIndexEnabled && (
+				<div className="text-vscode-descriptionForeground text-sm">
+					<p>{t("settings:codeIndex.disabledMessage")}</p>
 				</div>
 			)}
 		</>

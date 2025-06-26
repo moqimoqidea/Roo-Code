@@ -138,6 +138,7 @@ export interface WebviewMessage {
 		| "humanRelayResponse"
 		| "humanRelayCancel"
 		| "browserToolEnabled"
+		| "codebaseIndexEnabled"
 		| "telemetrySetting"
 		| "showRooIgnoredFiles"
 		| "testBrowserConnection"

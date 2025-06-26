@@ -64,7 +64,7 @@
 		"condense_context_grew": "O tamanho do contexto aumentou durante a condensação; pulando esta tentativa",
 		"share_task_failed": "Falha ao compartilhar tarefa",
 		"share_no_active_task": "Nenhuma tarefa ativa para compartilhar",
-		"share_auth_required": "Autenticazione necessaria. Faça login para compartilhar tarefas.",
+		"share_auth_required": "Autenticação necessária. Faça login para compartilhar tarefas.",
 		"share_not_enabled": "O compartilhamento de tarefas não está habilitado para esta organização.",
 		"share_task_not_found": "Tarefa não encontrada ou acesso negado.",
 		"mode_import_failed": "Falha ao importar o modo: {{error}}",

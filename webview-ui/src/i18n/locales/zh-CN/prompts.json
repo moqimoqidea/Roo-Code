@@ -61,6 +61,7 @@
 	"importMode": {
 		"selectLevel": "选择导入模式的位置：",
 		"import": "导入",
+		"importing": "导入中...",
 		"global": {
 			"label": "全局",
 			"description": "适用于所有项目。规则将合并到自定义指令中。"

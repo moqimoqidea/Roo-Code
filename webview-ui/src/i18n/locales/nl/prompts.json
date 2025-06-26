@@ -61,6 +61,7 @@
 	"importMode": {
 		"selectLevel": "Kies waar je deze modus wilt importeren:",
 		"import": "Importeren",
+		"importing": "Importeren...",
 		"global": {
 			"label": "Globaal niveau",
 			"description": "Beschikbaar in alle projecten. Regels worden samengevoegd in aangepaste instructies."

@@ -61,6 +61,7 @@
 	"importMode": {
 		"selectLevel": "Tria on importar aquest mode:",
 		"import": "Importar",
+		"importing": "Important...",
 		"global": {
 			"label": "Nivell global",
 			"description": "Disponible a tots els projectes. Les regles es fusionaran amb les instruccions personalitzades."

@@ -1680,6 +1680,13 @@ export const webviewMessageHandler = async (
 						// Show error message
 						vscode.window.showErrorMessage(t("common:errors.mode_import_failed", { error: result.error }))
 					}
+				} else {
+					// User cancelled the file dialog - reset the importing state
+					provider.postMessageToWebview({
+						type: "importModeResult",
+						success: false,
+						error: "cancelled",
+					})
 				}
 			} catch (error) {
 				const errorMessage = error instanceof Error ? error.message : String(error)

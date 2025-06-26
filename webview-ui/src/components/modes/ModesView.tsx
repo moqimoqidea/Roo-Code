@@ -429,8 +429,10 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 				setShowImportDialog(false)
 
 				if (!message.success) {
-					// Show error message
-					console.error("Failed to import mode:", message.error)
+					// Only log error if it's not a cancellation
+					if (message.error !== "cancelled") {
+						console.error("Failed to import mode:", message.error)
+					}
 				}
 			} else if (message.type === "checkRulesDirectoryResult") {
 				setHasRulesToExport((prev) => ({

@@ -66,6 +66,7 @@
 	"importMode": {
 		"selectLevel": "Bu modu nereye içe aktaracağınızı seçin:",
 		"import": "İçe Aktar",
+		"importing": "İçe aktarılıyor...",
 		"global": {
 			"label": "Genel Seviye",
 			"description": "Tüm projelerde kullanılabilir. Kurallar özel talimatlarla birleştirilecektir."

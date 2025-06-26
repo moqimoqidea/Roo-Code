@@ -66,6 +66,7 @@
 	"importMode": {
 		"selectLevel": "Chọn nơi để nhập chế độ này:",
 		"import": "Nhập",
+		"importing": "Đang nhập...",
 		"global": {
 			"label": "Cấp độ toàn cục",
 			"description": "Có sẵn trong tất cả các dự án. Các quy tắc sẽ được hợp nhất vào hướng dẫn tùy chỉnh."

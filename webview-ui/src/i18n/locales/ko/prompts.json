@@ -61,6 +61,7 @@
 	"importMode": {
 		"selectLevel": "이 모드를 가져올 위치를 선택하세요:",
 		"import": "가져오기",
+		"importing": "가져오는 중...",
 		"global": {
 			"label": "전역 수준",
 			"description": "모든 프로젝트에서 사용 가능합니다. 규칙은 사용자 지정 지침에 병합됩니다."

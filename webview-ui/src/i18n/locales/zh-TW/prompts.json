@@ -61,6 +61,7 @@
 	"importMode": {
 		"selectLevel": "選擇匯入模式的位置：",
 		"import": "匯入",
+		"importing": "匯入中...",
 		"global": {
 			"label": "全域",
 			"description": "適用於所有專案。規則將合併到自訂指令中。"

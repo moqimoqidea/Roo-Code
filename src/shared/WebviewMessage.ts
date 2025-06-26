@@ -176,6 +176,7 @@ export interface WebviewMessage {
 		| "profileThresholds"
 		| "shareTaskSuccess"
 		| "saveCodeIndexSettingsAtomic"
+		| "requestCodeIndexSecretStatus"
 	text?: string
 	tab?: "settings" | "history" | "mcp" | "modes" | "chat" | "marketplace" | "account"
 	disabled?: boolean

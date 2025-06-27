@@ -47,6 +47,7 @@ vi.mock("@src/i18n/TranslationContext", () => ({
 				"settings:codeIndex.searchMinScoreDescription":
 					"Minimum similarity score (0.0-1.0) required for search results. Lower values return more results but may be less relevant. Higher values return fewer but more relevant results.",
 				"settings:codeIndex.searchMinScoreResetTooltip": "Reset to default value (0.4)",
+				"settings:codeIndex.advancedConfigLabel": "Advanced Configuration",
 			}
 			return translations[key] || key
 		},
@@ -841,15 +842,29 @@ describe("CodeIndexSettings", () => {
 	})
 
 	describe("Search Minimum Score Slider", () => {
-		it("should render search minimum score slider with reset button", () => {
+		const expandAdvancedConfig = () => {
+			const advancedButton = screen.getByRole("button", { name: /Advanced Configuration/i })
+			fireEvent.click(advancedButton)
+		}
+
+		it("should render advanced configuration toggle button", () => {
 			render(<CodeIndexSettings {...defaultProps} />)
+
+			expect(screen.getByRole("button", { name: /Advanced Configuration/i })).toBeInTheDocument()
+			expect(screen.getByText("Advanced Configuration")).toBeInTheDocument()
+		})
+
+		it("should render search minimum score slider with reset button when expanded", () => {
+			render(<CodeIndexSettings {...defaultProps} />)
+
+			expandAdvancedConfig()
 
 			expect(screen.getByTestId("search-min-score-slider")).toBeInTheDocument()
 			expect(screen.getByTestId("search-min-score-reset-button")).toBeInTheDocument()
 			expect(screen.getByText("Search Score Threshold")).toBeInTheDocument()
 		})
 
-		it("should display current search minimum score value", () => {
+		it("should display current search minimum score value when expanded", () => {
 			const propsWithScore = {
 				...defaultProps,
 				codebaseIndexConfig: {
@@ -860,11 +875,15 @@ describe("CodeIndexSettings", () => {
 
 			render(<CodeIndexSettings {...propsWithScore} />)
 
+			expandAdvancedConfig()
+
 			expect(screen.getByText("0.65")).toBeInTheDocument()
 		})
 
 		it("should call setCachedStateField when slider value changes", () => {
 			render(<CodeIndexSettings {...defaultProps} />)
+
+			expandAdvancedConfig()
 
 			const slider = screen.getByTestId("search-min-score-slider")
 			fireEvent.change(slider, { target: { value: "0.8" } })
@@ -886,6 +905,8 @@ describe("CodeIndexSettings", () => {
 
 			render(<CodeIndexSettings {...propsWithScore} />)
 
+			expandAdvancedConfig()
+
 			const resetButton = screen.getByTestId("search-min-score-reset-button")
 			fireEvent.click(resetButton)
 
@@ -906,7 +927,24 @@ describe("CodeIndexSettings", () => {
 
 			render(<CodeIndexSettings {...propsWithoutScore} />)
 
+			expandAdvancedConfig()
+
 			expect(screen.getByText("0.40")).toBeInTheDocument()
+		})
+
+		it("should toggle advanced section visibility", () => {
+			render(<CodeIndexSettings {...defaultProps} />)
+
+			// Initially collapsed - should not see slider
+			expect(screen.queryByTestId("search-min-score-slider")).not.toBeInTheDocument()
+
+			// Expand advanced section
+			expandAdvancedConfig()
+			expect(screen.getByTestId("search-min-score-slider")).toBeInTheDocument()
+
+			// Collapse again
+			expandAdvancedConfig()
+			expect(screen.queryByTestId("search-min-score-slider")).not.toBeInTheDocument()
 		})
 	})
 

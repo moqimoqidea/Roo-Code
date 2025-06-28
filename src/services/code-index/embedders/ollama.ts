@@ -1,6 +1,7 @@
 import { ApiHandlerOptions } from "../../../shared/api"
 import { EmbedderInfo, EmbeddingResponse, IEmbedder } from "../interfaces"
 import { getModelQueryPrefix } from "../../../shared/embeddingModels"
+import { MAX_ITEM_TOKENS } from "../constants"
 import { t } from "../../../i18n"
 
 /**
@@ -29,7 +30,26 @@ export class CodeIndexOllamaEmbedder implements IEmbedder {
 		// Apply model-specific query prefix if required
 		const queryPrefix = getModelQueryPrefix("ollama", modelToUse)
 		const processedTexts = queryPrefix
-			? texts.map((text) => (text.startsWith(queryPrefix) ? text : `${queryPrefix}${text}`))
+			? texts.map((text, index) => {
+					// Prevent double-prefixing
+					if (text.startsWith(queryPrefix)) {
+						return text
+					}
+					const prefixedText = `${queryPrefix}${text}`
+					const estimatedTokens = Math.ceil(prefixedText.length / 4)
+					if (estimatedTokens > MAX_ITEM_TOKENS) {
+						console.warn(
+							t("embeddings:textWithPrefixExceedsTokenLimit", {
+								index,
+								estimatedTokens,
+								maxTokens: MAX_ITEM_TOKENS,
+							}),
+						)
+						// Return original text if adding prefix would exceed limit
+						return text
+					}
+					return prefixedText
+				})
 			: texts
 
 		try {

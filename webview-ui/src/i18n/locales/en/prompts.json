@@ -63,7 +63,7 @@
 		"importing": "Importing...",
 		"global": {
 			"label": "Global Level",
-			"description": "Available across all projects. Rules will be merged into custom instructions."
+			"description": "Available across all projects. If the exported mode contained rules files, they will be recreated in the global .roo/rules-{slug}/ folder."
 		},
 		"project": {
 			"label": "Project Level",

@@ -64,7 +64,7 @@
 		"importing": "Importation...",
 		"global": {
 			"label": "Niveau global",
-			"description": "Disponible dans tous les projets. Les règles seront fusionnées dans les instructions personnalisées."
+			"description": "Disponible dans tous les projets. Si le mode exporté contenait des fichiers de règles, ils seront recréés dans le dossier global .roo/rules-{slug}/."
 		},
 		"project": {
 			"label": "Niveau projet",

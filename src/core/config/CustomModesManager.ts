@@ -9,6 +9,7 @@ import { type ModeConfig, customModesSettingsSchema, modeConfigSchema } from "@r
 
 import { fileExistsAtPath } from "../../utils/fs"
 import { getWorkspacePath } from "../../utils/path"
+import { getGlobalRooDirectory } from "../../services/roo-config"
 import { logger } from "../../utils/logging"
 import { GlobalFileNames } from "../../shared/globalFileNames"
 import { ensureSettingsDirectoryExists } from "../../utils/globalContext"
@@ -834,29 +835,50 @@ export class CustomModesManager {
 						}
 					}
 				} else if (source === "global" && rulesFiles && Array.isArray(rulesFiles)) {
-					// For global imports, we need to merge the rules content into the mode's customInstructions
-					let mergedInstructions = modeConfig.customInstructions || ""
+					// For global imports, preserve the rules files structure in the global .roo directory
+					const globalRooDir = getGlobalRooDirectory()
 
-					// Add a separator if there are existing instructions
-					if (mergedInstructions) {
-						mergedInstructions += "\n\n"
+					// Always remove the existing rules folder for this mode if it exists
+					// This ensures that if the imported mode has no rules, the folder is cleaned up
+					const rulesFolderPath = path.join(globalRooDir, `rules-${importMode.slug}`)
+					try {
+						await fs.rm(rulesFolderPath, { recursive: true, force: true })
+						logger.info(`Removed existing global rules folder for mode ${importMode.slug}`)
+					} catch (error) {
+						// It's okay if the folder doesn't exist
+						logger.debug(`No existing global rules folder to remove for mode ${importMode.slug}`)
 					}
 
-					// Add the rules content
-					mergedInstructions += "# Imported Rules\n\n"
-
+					// Import the new rules files with path validation
 					for (const ruleFile of rulesFiles) {
-						if (ruleFile.content) {
-							mergedInstructions += `# Rules from ${ruleFile.relativePath}:\n${ruleFile.content}\n\n`
+						if (ruleFile.relativePath && ruleFile.content) {
+							// Validate the relative path to prevent path traversal attacks
+							const normalizedRelativePath = path.normalize(ruleFile.relativePath)
+
+							// Ensure the path doesn't contain traversal sequences
+							if (normalizedRelativePath.includes("..") || path.isAbsolute(normalizedRelativePath)) {
+								logger.error(`Invalid file path detected: ${ruleFile.relativePath}`)
+								continue // Skip this file but continue with others
+							}
+
+							const targetPath = path.join(globalRooDir, normalizedRelativePath)
+							const normalizedTargetPath = path.normalize(targetPath)
+							const expectedBasePath = path.normalize(globalRooDir)
+
+							// Ensure the resolved path stays within the global .roo directory
+							if (!normalizedTargetPath.startsWith(expectedBasePath)) {
+								logger.error(`Path traversal attempt detected: ${ruleFile.relativePath}`)
+								continue // Skip this file but continue with others
+							}
+
+							// Ensure directory exists
+							const targetDir = path.dirname(targetPath)
+							await fs.mkdir(targetDir, { recursive: true })
+
+							// Write the file
+							await fs.writeFile(targetPath, ruleFile.content, "utf-8")
 						}
 					}
-
-					// Update the mode with merged instructions
-					await this.updateCustomMode(importMode.slug, {
-						...modeConfig,
-						source: source,
-						customInstructions: mergedInstructions.trim(),
-					})
 				}
 			}
 

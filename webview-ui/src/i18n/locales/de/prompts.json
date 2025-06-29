@@ -64,7 +64,7 @@
 		"importing": "Importiere...",
 		"global": {
 			"label": "Globale Ebene",
-			"description": "Verfügbar in allen Projekten. Regeln werden in benutzerdefinierte Anweisungen zusammengeführt."
+			"description": "Verfügbar in allen Projekten. Wenn der exportierte Modus Regeldateien enthielt, werden diese im globalen Ordner .roo/rules-{slug}/ neu erstellt."
 		},
 		"project": {
 			"label": "Projektebene",

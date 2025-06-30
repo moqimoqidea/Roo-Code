@@ -38,12 +38,12 @@
   </pattern>
   
   <pattern name="non_interactive_rebase">
-    <usage>Non-interactive rebase operations for when no conflicts are detected.</usage>
+    <usage>Rebase operations using GIT_EDITOR to prevent interactive prompts.</usage>
     <template>
       <command tool="git">git checkout <pr_branch></command>
-      <command tool="git">git rebase main</command>
-      <comment>Only proceed if rebase succeeds without conflicts</comment>
-      <command tool="git">git push --force-with-lease origin <pr_branch></command>
+      <command tool="git">GIT_EDITOR=true git rebase main</command>
+      <comment>If conflicts occur, resolve them manually then use 'git rebase --continue'</comment>
+      <command tool="git">git push --force-with-lease <remote> <pr_branch></command>
     </template>
   </pattern>
   
@@ -57,12 +57,11 @@
     </template>
   </pattern>
   <pattern name="checking_out_pr">
-    <usage>Command to check out a pull request branch locally without interactive prompts.</usage>
+    <usage>Check out a pull request branch locally.</usage>
     <template>
       <command tool="gh">gh pr checkout <pr_number_or_url> --force</command>
-      <comment>Alternative: Use git commands if gh checkout fails</comment>
-      <command tool="git">git fetch origin pull/<pr_number>/head:<branch_name></command>
-      <command tool="git">git checkout <branch_name></command>
+      <comment>Alternative if gh checkout fails:</comment>
+      <command tool="git">git fetch origin pull/<pr_number>/head:<branch_name> && git checkout <branch_name></command>
     </template>
   </pattern>
   

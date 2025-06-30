@@ -39,13 +39,13 @@
     </phase>
 
     <phase name="implementation">
-      <description>Execute the user's chosen course of action using non-interactive commands only.</description>
+      <description>Execute the user's chosen course of action.</description>
       <steps>
-        <step>Check out the PR branch locally using 'gh pr checkout --force' to avoid interactive prompts.</step>
+        <step>Check out the PR branch locally using 'gh pr checkout --force'.</step>
         <step>Determine if the PR is from a fork by checking 'gh pr view --json isCrossRepository'.</step>
         <step>Apply code changes based on review feedback using file editing tools.</step>
         <step>Fix failing tests by modifying test files or source code as needed.</step>
-        <step>For conflict resolution: Use automated detection first, then manual resolution via file editing, avoiding interactive rebase.</step>
+        <step>For conflict resolution: Use GIT_EDITOR=true for non-interactive rebases, then resolve conflicts via file editing.</step>
         <step>If changes affect user-facing content (i18n files, UI components, announcements), delegate translation updates using the new_task tool with translate mode.</step>
         <step>Commit changes using git commands.</step>
         <step>Push changes to the correct remote (origin for same-repo PRs, fork remote for cross-repo PRs) using 'git push --force-with-lease'.</step>

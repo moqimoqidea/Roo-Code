@@ -46,36 +46,26 @@
 
     <tool name="gh pr checkout">
       <best_practices>
-        <practice>Always use --force flag to avoid interactive branch selection.</practice>
-        <practice>Format: 'gh pr checkout <pr_number> --force'</practice>
-        <practice>If gh checkout fails, fallback to git fetch + checkout pattern.</practice>
+        <practice>Use --force flag: 'gh pr checkout <pr_number> --force'</practice>
+        <practice>If gh checkout fails, use: git fetch origin pull/<pr_number>/head:<branch_name></practice>
       </best_practices>
-      <non_interactive_alternatives>
-        <alternative>git fetch origin pull/<pr_number>/head:<branch_name></alternative>
-        <alternative>git checkout <branch_name></alternative>
-      </non_interactive_alternatives>
     </tool>
 
     <tool name="git operations">
       <best_practices>
         <practice>Use --force-with-lease for safer force pushing.</practice>
-        <practice>Check git status programmatically with --porcelain flag.</practice>
-        <practice>Use git rebase --dry-run to detect conflicts before attempting rebase.</practice>
+        <practice>Use GIT_EDITOR=true to prevent interactive prompts during rebases.</practice>
         <practice>Always determine the correct remote before pushing (origin vs fork).</practice>
       </best_practices>
       <remote_handling>
         <step>Check if PR is from a fork: 'gh pr view <pr_number> --json isCrossRepository'</step>
-        <step>If isCrossRepository is true, the PR is from a fork</step>
-        <step>For fork PRs, check if fork remote exists: 'git remote -v'</step>
-        <step>If fork remote doesn't exist, add it: 'git remote add fork https://github.com/<fork_owner>/<repo>.git'</step>
+        <step>If isCrossRepository is true, add fork remote if needed</step>
         <step>Push to appropriate remote: 'git push --force-with-lease <remote> <branch>'</step>
       </remote_handling>
       <conflict_resolution>
-        <step>Use 'git rebase --dry-run main' to detect conflicts</step>
-        <step>If conflicts detected, resolve manually via file editing</step>
-        <step>Use 'git status --porcelain' to identify conflicted files</step>
-        <step>Edit files to resolve conflicts, removing conflict markers</step>
-        <step>Use 'git add .' and commit the resolved changes</step>
+        <step>Use 'GIT_EDITOR=true git rebase main' to start rebase</step>
+        <step>If conflicts occur, edit files to resolve them</step>
+        <step>Use 'git add .' and 'git rebase --continue' to proceed</step>
       </conflict_resolution>
     </tool>
 

@@ -59,13 +59,13 @@
       </step>
       
       <step number="4">
-        <description>Check out the pull request branch using non-interactive command.</description>
+        <description>Check out the pull request branch.</description>
         <tool_use>
           <execute_command>
             <command>gh pr checkout 4365 --force</command>
           </execute_command>
         </tool_use>
-        <analysis>The PR branch is now ready for local edits. Using --force avoids interactive prompts.</analysis>
+        <analysis>The PR branch is now ready for local edits.</analysis>
       </step>
 
       <step number="5">
@@ -133,7 +133,7 @@
 <command>gh pr checkout 1234 --force</command>
 </execute_command>
         </tool_use>
-        <analysis>Make the requested button text changes in the UI components. Using --force to avoid interactive prompts.</analysis>
+        <analysis>Make the requested button text changes in the UI components.</analysis>
       </step>
 
       <step number="3">

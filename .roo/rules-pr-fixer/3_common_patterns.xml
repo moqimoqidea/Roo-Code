@@ -25,15 +25,12 @@
     </template>
   </pattern>
   <pattern name="detecting_conflicts">
-    <usage>Commands to detect merge conflicts without interactive operations.</usage>
+    <usage>Commands to detect merge conflicts.</usage>
     <template>
-      <command tool="git">git checkout main</command>
-      <command tool="git">git pull origin main</command>
-      <command tool="git">git checkout <pr_branch></command>
-      <command tool="git">git merge-base main HEAD</command>
-      <command tool="git">git diff --name-only main...HEAD</command>
-      <comment>Check if rebase would create conflicts (dry run)</comment>
-      <command tool="git">git rebase --dry-run main</command>
+      <comment>Fetch latest main branch</comment>
+      <command tool="git">git fetch origin main</command>
+      <comment>Check if rebase would create conflicts</comment>
+      <command tool="git">git rebase --dry-run origin/main</command>
     </template>
   </pattern>
   

@@ -103,9 +103,10 @@ export const AutoApproveToggle = ({ onToggle, ...props }: AutoApproveToggleProps
 	return (
 		<div
 			className={cn(
-				"grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 max-w-[400px] mx-auto my-2 ",
+				"flex flex-row flex-wrap justify-center gap-2 max-w-[600px] mx-auto my-2 ",
 				"[@media(min-width:600px)]:gap-4",
-				"[@media(min-width:800px)]:max-w-[800px]",
+				"[@media(min-width:800px)]:max-w-[900px]",
+				"[@media(min-width:1200px)]:max-w-[1800px]",
 			)}>
 			{Object.values(autoApproveSettingsConfig).map(({ key, descriptionKey, labelKey, icon, testId }) => (
 				<StandardTooltip key={key} content={t(descriptionKey || "")}>

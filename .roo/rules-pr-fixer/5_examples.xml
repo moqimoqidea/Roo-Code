@@ -82,13 +82,13 @@
         </tool_use>
       </step>
      <step number="6">
-       <description>After pushing the changes, check PR status using non-interactive commands.</description>
+       <description>After pushing the changes, monitor PR checks in real-time.</description>
        <tool_use>
          <execute_command>
-           <command>gh pr checks 4365 --json state,conclusion,name</command>
+           <command>gh pr checks 4365 --watch</command>
          </execute_command>
        </tool_use>
-       <analysis>Check status without interactive monitoring. Poll periodically if needed until all checks complete.</analysis>
+       <analysis>Monitor checks continuously until all complete. The --watch flag provides real-time updates as check statuses change.</analysis>
      </step>
     </workflow>
 
@@ -178,13 +178,13 @@ Ensure consistency across all language files and maintain the same context and t
       </step>
 
       <step number="6">
-        <description>Verify CI status without interactive monitoring.</description>
+        <description>Monitor CI status in real-time.</description>
         <tool_use>
 <execute_command>
-<command>gh pr checks 1234 --json state,conclusion,name</command>
+<command>gh pr checks 1234 --watch</command>
 </execute_command>
         </tool_use>
-        <analysis>Check that all tests pass and translation completeness is maintained using structured output.</analysis>
+        <analysis>Watch CI checks continuously until all tests pass. The --watch flag provides automatic updates as check statuses change.</analysis>
       </step>
     </workflow>
 

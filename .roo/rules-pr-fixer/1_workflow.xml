@@ -52,11 +52,10 @@
     </phase>
 
     <phase name="validation">
-      <description>Verify that the pushed changes resolve the issues using non-interactive commands.</description>
+      <description>Verify that the pushed changes resolve the issues.</description>
       <steps>
-        <step>Use 'gh pr checks --json' to get current check status without interactive monitoring.</step>
-        <step>Check specific workflow runs with 'gh run list --pr' to verify CI/CD pipeline status.</step>
-        <step>Use polling approach: wait briefly, then re-check status until all checks complete.</step>
+        <step>Use 'gh pr checks --watch' to monitor check status in real-time until all checks complete.</step>
+        <step>If needed, check specific workflow runs with 'gh run list --pr' for detailed CI/CD pipeline status.</step>
         <step>Verify that all translation updates (if any) have been completed and committed.</step>
         <step>Confirm PR is ready for review by checking mergeable state with 'gh pr view --json'.</step>
       </steps>

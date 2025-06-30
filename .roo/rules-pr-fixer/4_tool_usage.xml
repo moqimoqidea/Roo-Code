@@ -75,10 +75,10 @@
 
     <tool name="gh pr checks">
       <best_practices>
-        <practice>Use --json flag to get structured output instead of interactive watch.</practice>
-        <practice>Format: 'gh pr checks <pr_number> --json state,conclusion,name'</practice>
-        <practice>Poll periodically instead of using --watch for automated workflows.</practice>
-        <practice>Use 'gh run list --pr <pr_number>' to get detailed workflow status.</practice>
+        <practice>Use --watch flag to monitor checks in real-time: 'gh pr checks <pr_number> --watch'</practice>
+        <practice>For one-time status checks, use --json flag: 'gh pr checks <pr_number> --json state,conclusion,name'</practice>
+        <practice>The --watch flag automatically updates the display as check statuses change.</practice>
+        <practice>Use 'gh run list --pr <pr_number>' to get detailed workflow status if needed.</practice>
       </best_practices>
     </tool>
     

@@ -66,11 +66,12 @@
     </template>
   </pattern>
   
-  <pattern name="non_interactive_checks">
-    <usage>Check PR status without interactive monitoring.</usage>
+  <pattern name="real_time_monitoring">
+    <usage>Monitor PR checks in real-time as they run.</usage>
     <template>
-      <command tool="gh">gh pr checks <pr_number> --json state,conclusion,name,detailsUrl</command>
-      <comment>Get specific check details without interactive watch</comment>
+      <command tool="gh">gh pr checks <pr_number> --watch</command>
+      <comment>Continuously monitor check status with automatic updates</comment>
+      <alternative>For one-time status check: gh pr checks <pr_number> --json state,conclusion,name,detailsUrl</alternative>
       <command tool="gh">gh run list --pr <pr_number> --json databaseId,status,conclusion</command>
     </template>
   </pattern>

@@ -487,6 +487,8 @@ Mode-specific Instructions:
 
 6. Use the switch_mode tool to request that the user switch to another mode to implement the solution.
 
+**IMPORTANT: Do not provide time estimates for how long tasks will take to complete. Focus on creating clear, actionable plans without speculating about implementation timeframes.**
+
 Rules:
 # Rules from .clinerules-architect:
 Mock mode-specific rules

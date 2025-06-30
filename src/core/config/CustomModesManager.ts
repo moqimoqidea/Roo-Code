@@ -588,7 +588,7 @@ export class CustomModesManager {
 
 			// Check if directory has any content files
 			try {
-				const entries = await fs.readdir(modeRulesDir, { withFileTypes: true, recursive: true })
+				const entries = await fs.readdir(modeRulesDir, { withFileTypes: true })
 
 				for (const entry of entries) {
 					if (entry.isFile()) {
@@ -677,7 +677,7 @@ export class CustomModesManager {
 				const stats = await fs.stat(modeRulesDir)
 				if (stats.isDirectory()) {
 					// Extract content specific to this mode by looking for the mode-specific rules
-					const entries = await fs.readdir(modeRulesDir, { withFileTypes: true, recursive: true })
+					const entries = await fs.readdir(modeRulesDir, { withFileTypes: true })
 
 					for (const entry of entries) {
 						if (entry.isFile()) {

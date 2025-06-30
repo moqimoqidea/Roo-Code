@@ -168,16 +168,26 @@ Ensure consistency across all language files and maintain the same context and t
       </step>
 
       <step number="5">
-        <description>Push changes and check CI status using non-interactive commands.</description>
+        <description>Check if PR is from a fork and push to correct remote.</description>
         <tool_use>
 <execute_command>
-<command>git push --force-with-lease</command>
+<command>gh pr view 1234 --json isCrossRepository,headRepositoryOwner,headRefName</command>
 </execute_command>
         </tool_use>
-        <analysis>Push changes safely to update the pull request.</analysis>
+        <analysis>Determine if this is a cross-repository PR to know which remote to push to.</analysis>
+      </step>
+      
+      <step number="6">
+        <description>Push changes to the appropriate remote.</description>
+        <tool_use>
+<execute_command>
+<command>git push --force-with-lease origin <branch_name></command>
+</execute_command>
+        </tool_use>
+        <analysis>Push changes safely to update the pull request. Use 'fork' remote instead if PR is from a fork.</analysis>
       </step>
 
-      <step number="6">
+      <step number="7">
         <description>Monitor CI status in real-time.</description>
         <tool_use>
 <execute_command>

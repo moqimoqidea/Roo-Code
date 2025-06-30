@@ -66,6 +66,19 @@
     </template>
   </pattern>
   
+  <pattern name="determine_push_remote">
+    <usage>Determine the correct remote to push to (handles forks).</usage>
+    <template>
+      <comment>Get PR metadata to check if it's from a fork</comment>
+      <command tool="gh">gh pr view <pr_number> --json headRepositoryOwner,headRefName,isCrossRepository</command>
+      <comment>If isCrossRepository is true, it's from a fork</comment>
+      <command tool="git">git remote -v</command>
+      <comment>Check if fork remote exists, otherwise add it</comment>
+      <command tool="git">git remote add fork https://github.com/<fork_owner>/<repo_name>.git</command>
+      <comment>Use appropriate remote based on PR source</comment>
+    </template>
+  </pattern>
+  
   <pattern name="real_time_monitoring">
     <usage>Monitor PR checks in real-time as they run.</usage>
     <template>
@@ -77,13 +90,17 @@
   </pattern>
   
   <pattern name="safe_push_operations">
-    <usage>Push operations that avoid interactive prompts and credential issues.</usage>
+    <usage>Push operations that handle both origin and fork remotes correctly.</usage>
     <template>
+      <comment>First determine the correct remote (origin or fork)</comment>
+      <command tool="gh">gh pr view <pr_number> --json headRepositoryOwner,headRefName,isCrossRepository</command>
+      <comment>If isCrossRepository is false, push to origin</comment>
       <command tool="git">git push --force-with-lease origin <branch_name></command>
-      <comment>If force-with-lease fails, check remote state first</comment>
-      <command tool="git">git fetch origin <branch_name></command>
-      <command tool="git">git status --porcelain</command>
-      <command tool="git">git push --force origin <branch_name></command>
+      <comment>If isCrossRepository is true, push to fork remote</comment>
+      <command tool="git">git push --force-with-lease fork <branch_name></command>
+      <comment>If force-with-lease fails, fetch and retry</comment>
+      <command tool="git">git fetch <remote> <branch_name></command>
+      <command tool="git">git push --force <remote> <branch_name></command>
     </template>
   </pattern>
 

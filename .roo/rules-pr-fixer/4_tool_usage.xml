@@ -61,7 +61,15 @@
         <practice>Use --force-with-lease for safer force pushing.</practice>
         <practice>Check git status programmatically with --porcelain flag.</practice>
         <practice>Use git rebase --dry-run to detect conflicts before attempting rebase.</practice>
+        <practice>Always determine the correct remote before pushing (origin vs fork).</practice>
       </best_practices>
+      <remote_handling>
+        <step>Check if PR is from a fork: 'gh pr view <pr_number> --json isCrossRepository'</step>
+        <step>If isCrossRepository is true, the PR is from a fork</step>
+        <step>For fork PRs, check if fork remote exists: 'git remote -v'</step>
+        <step>If fork remote doesn't exist, add it: 'git remote add fork https://github.com/<fork_owner>/<repo>.git'</step>
+        <step>Push to appropriate remote: 'git push --force-with-lease <remote> <branch>'</step>
+      </remote_handling>
       <conflict_resolution>
         <step>Use 'git rebase --dry-run main' to detect conflicts</step>
         <step>If conflicts detected, resolve manually via file editing</step>

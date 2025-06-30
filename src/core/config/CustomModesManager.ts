@@ -5,7 +5,7 @@ import * as fs from "fs/promises"
 import * as yaml from "yaml"
 import stripBom from "strip-bom"
 
-import { type ModeConfig, customModesSettingsSchema, modeConfigSchema } from "@roo-code/types"
+import { type ModeConfig, type PromptComponent, customModesSettingsSchema, modeConfigSchema } from "@roo-code/types"
 
 import { fileExistsAtPath } from "../../utils/fs"
 import { getWorkspacePath } from "../../utils/path"
@@ -620,7 +620,7 @@ export class CustomModesManager {
 	 * @param customPrompts - Optional custom prompts to merge into the export
 	 * @returns Success status with YAML content or error message
 	 */
-	public async exportModeWithRules(slug: string, customPrompts?: any): Promise<ExportResult> {
+	public async exportModeWithRules(slug: string, customPrompts?: PromptComponent): Promise<ExportResult> {
 		try {
 			// Import modes from shared to check built-in modes
 			const { modes: builtInModes } = await import("../../shared/modes")

@@ -161,10 +161,10 @@ Ensure consistency across all language files and maintain the same context and t
         <description>Commit all changes including translations with automated git configuration.</description>
         <tool_use>
 <execute_command>
-<command>git add . && git -c user.name="PR Fixer" -c user.email="pr-fixer@local" commit -m "fix: update button text and translations as requested in review"</command>
+<command>git add . && git commit -m "fix: update button text and translations as requested in review"</command>
 </execute_command>
         </tool_use>
-        <analysis>All code changes and translation updates are now committed with explicit author info.</analysis>
+        <analysis>All code changes and translation updates are now committed.</analysis>
       </step>
 
       <step number="5">
@@ -174,7 +174,7 @@ Ensure consistency across all language files and maintain the same context and t
 <command>git push --force-with-lease</command>
 </execute_command>
         </tool_use>
-        <analysis>Push changes safely, then check status programmatically.</analysis>
+        <analysis>Push changes safely to update the pull request.</analysis>
       </step>
 
       <step number="6">

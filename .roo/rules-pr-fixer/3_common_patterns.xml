@@ -91,9 +91,7 @@
     <usage>Commit operations that work in automated environments.</usage>
     <template>
       <command tool="git">git add .</command>
-      <command tool="git">git -c user.name="PR Fixer" -c user.email="pr-fixer@local" commit -m "<commit_message>"</command>
-      <comment>Alternative with explicit author if needed</comment>
-      <command tool="git">git commit --author="PR Fixer <pr-fixer@local>" -m "<commit_message>"</command>
+      <command tool="git">git commit -m "<commit_message>"</command>
     </template>
   </pattern>
 </common_patterns>

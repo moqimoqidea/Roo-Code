@@ -46,8 +46,8 @@
         <step>Fix failing tests by modifying test files or source code as needed.</step>
         <step>For conflict resolution: Use automated detection first, then manual resolution via file editing, avoiding interactive rebase.</step>
         <step>If changes affect user-facing content (i18n files, UI components, announcements), delegate translation updates using the new_task tool with translate mode.</step>
-        <step>Commit changes using automated git commands with explicit author information.</step>
-        <step>Push changes using 'git push --force-with-lease' to avoid interactive authentication prompts.</step>
+        <step>Commit changes using git commands.</step>
+        <step>Push changes using 'git push --force-with-lease' to safely update the pull request.</step>
       </steps>
     </phase>
 

@@ -58,8 +58,6 @@
 
     <tool name="git operations">
       <best_practices>
-        <practice>Use explicit git configuration for automated commits.</practice>
-        <practice>Format: 'git -c user.name="PR Fixer" -c user.email="pr-fixer@local" commit'</practice>
         <practice>Use --force-with-lease for safer force pushing.</practice>
         <practice>Check git status programmatically with --porcelain flag.</practice>
         <practice>Use git rebase --dry-run to detect conflicts before attempting rebase.</practice>
@@ -69,7 +67,7 @@
         <step>If conflicts detected, resolve manually via file editing</step>
         <step>Use 'git status --porcelain' to identify conflicted files</step>
         <step>Edit files to resolve conflicts, removing conflict markers</step>
-        <step>Use 'git add .' and commit with explicit author info</step>
+        <step>Use 'git add .' and commit the resolved changes</step>
       </conflict_resolution>
     </tool>
 

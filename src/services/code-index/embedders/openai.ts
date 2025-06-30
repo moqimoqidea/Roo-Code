@@ -42,6 +42,10 @@ export class OpenAiEmbedder extends OpenAiNativeHandler implements IEmbedder {
 		const queryPrefix = getModelQueryPrefix("openai", modelToUse)
 		const processedTexts = queryPrefix
 			? texts.map((text, index) => {
+					// Prevent double-prefixing
+					if (text.startsWith(queryPrefix)) {
+						return text
+					}
 					const prefixedText = `${queryPrefix}${text}`
 					const estimatedTokens = Math.ceil(prefixedText.length / 4)
 					if (estimatedTokens > MAX_ITEM_TOKENS) {

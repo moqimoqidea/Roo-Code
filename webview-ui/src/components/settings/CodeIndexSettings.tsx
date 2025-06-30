@@ -505,27 +505,18 @@ export const CodeIndexSettings: React.FC<CodeIndexSettingsProps> = ({
 					</div>
 
 					{/* Advanced Configuration Section */}
-					<div className="mt-6 pt-4 border-t border-vscode-widget-border">
+					<div className="mt-4">
 						<button
-							className="flex items-center justify-between w-full text-left group hover:bg-vscode-list-hoverBackground rounded p-2 -m-2"
 							onClick={() => setAdvancedExpanded(!advancedExpanded)}
-							aria-expanded={advancedExpanded}
-							aria-controls="advanced-config-section">
-							<div className="flex items-center gap-2 font-bold">
-								<div>{t("settings:codeIndex.advancedConfigLabel")}</div>
-							</div>
-							<svg
-								className={`w-4 h-4 text-vscode-foreground transition-transform duration-200 ${
-									advancedExpanded ? "rotate-90" : ""
-								}`}
-								fill="none"
-								stroke="currentColor"
-								viewBox="0 0 24 24">
-								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-							</svg>
+							className="flex items-center text-xs text-vscode-foreground hover:text-vscode-textLink-foreground focus:outline-none"
+							aria-expanded={advancedExpanded}>
+							<span
+								className={`codicon codicon-${advancedExpanded ? "chevron-down" : "chevron-right"} mr-1`}></span>
+							<span>{t("settings:codeIndex.advancedConfigLabel")}</span>
 						</button>
+
 						{advancedExpanded && (
-							<div id="advanced-config-section" className="mt-4">
+							<div className="text-xs text-vscode-descriptionForeground mt-2 ml-5">
 								<div className="flex flex-col gap-3">
 									<div>
 										<span className="block font-medium mb-1">

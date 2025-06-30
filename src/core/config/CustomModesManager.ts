@@ -617,9 +617,10 @@ export class CustomModesManager {
 	/**
 	 * Exports a mode configuration with its associated rules files into a shareable YAML format
 	 * @param slug - The mode identifier to export
+	 * @param customPrompts - Optional custom prompts to merge into the export
 	 * @returns Success status with YAML content or error message
 	 */
-	public async exportModeWithRules(slug: string): Promise<ExportResult> {
+	public async exportModeWithRules(slug: string, customPrompts?: any): Promise<ExportResult> {
 		try {
 			// Import modes from shared to check built-in modes
 			const { modes: builtInModes } = await import("../../shared/modes")
@@ -700,6 +701,14 @@ export class CustomModesManager {
 				...mode,
 				// Remove source property for export
 				source: "project" as const,
+			}
+
+			// Merge custom prompts if provided
+			if (customPrompts) {
+				if (customPrompts.roleDefinition) exportMode.roleDefinition = customPrompts.roleDefinition
+				if (customPrompts.description) exportMode.description = customPrompts.description
+				if (customPrompts.whenToUse) exportMode.whenToUse = customPrompts.whenToUse
+				if (customPrompts.customInstructions) exportMode.customInstructions = customPrompts.customInstructions
 			}
 
 			// Add rules files if any exist

@@ -1509,32 +1509,10 @@ export const webviewMessageHandler = async (
 					const customModePrompts = getGlobalState("customModePrompts") || {}
 					const customPrompt = customModePrompts[message.slug]
 
-					// Export the mode with any customizations
-					const result = await provider.customModesManager.exportModeWithRules(message.slug)
+					// Export the mode with any customizations merged directly
+					const result = await provider.customModesManager.exportModeWithRules(message.slug, customPrompt)
 
 					if (result.success && result.yaml) {
-						// If there are custom prompts for this mode, merge them into the export
-						if (customPrompt && result.yaml) {
-							try {
-								const exportData = yaml.parse(result.yaml)
-								if (exportData.customModes && exportData.customModes[0]) {
-									// Merge custom prompt data into the mode
-									const mode = exportData.customModes[0]
-									if (customPrompt.roleDefinition) mode.roleDefinition = customPrompt.roleDefinition
-									if (customPrompt.description) mode.description = customPrompt.description
-									if (customPrompt.whenToUse) mode.whenToUse = customPrompt.whenToUse
-									if (customPrompt.customInstructions)
-										mode.customInstructions = customPrompt.customInstructions
-
-									// Re-stringify the updated data
-									result.yaml = yaml.stringify(exportData)
-								}
-							} catch (error) {
-								// If parsing fails, continue with original yaml
-								provider.log(`Failed to merge custom prompts into export: ${error}`)
-							}
-						}
-
 						// Get last used directory for export
 						const lastExportPath = getGlobalState("lastModeExportPath")
 						let defaultUri: vscode.Uri

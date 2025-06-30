@@ -592,7 +592,8 @@ export class CustomModesManager {
 
 				for (const entry of entries) {
 					if (entry.isFile()) {
-						const filePath = path.join(entry.parentPath || modeRulesDir, entry.name)
+						// Use path.join with modeRulesDir and entry.name for compatibility
+						const filePath = path.join(modeRulesDir, entry.name)
 						const content = await fs.readFile(filePath, "utf-8")
 						if (content.trim()) {
 							return true // Found at least one file with content
@@ -679,7 +680,8 @@ export class CustomModesManager {
 
 					for (const entry of entries) {
 						if (entry.isFile()) {
-							const filePath = path.join(entry.parentPath || modeRulesDir, entry.name)
+							// Use path.join with modeRulesDir and entry.name for compatibility
+							const filePath = path.join(modeRulesDir, entry.name)
 							const content = await fs.readFile(filePath, "utf-8")
 							if (content.trim()) {
 								// Calculate relative path from .roo directory
@@ -697,7 +699,7 @@ export class CustomModesManager {
 			const exportMode: ExportedModeConfig = {
 				...mode,
 				// Remove source property for export
-				source: undefined as any,
+				source: "project" as const,
 			}
 
 			// Add rules files if any exist

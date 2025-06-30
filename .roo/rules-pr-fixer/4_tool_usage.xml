@@ -11,6 +11,11 @@
       <why>Quickly identifies if there are failing automated checks that need investigation.</why>
    </priority>
    <priority level="3">
+     <tool>new_task (mode: translate)</tool>
+     <when>When changes affect user-facing content, i18n files, or UI components that require translation.</when>
+     <why>Ensures translation consistency across all supported languages when PR fixes involve user-facing changes.</why>
+   </priority>
+   <priority level="4">
      <tool>gh pr checks --watch</tool>
      <when>After pushing a fix, to confirm that the changes have resolved the CI/CD failures.</when>
      <why>Provides real-time feedback on whether the fix was successful.</why>
@@ -35,6 +40,45 @@
       <best_practices>
         <practice>Use this command to get the exact error messages from failing tests.</practice>
         <practice>Search the log for keywords like 'error', 'failed', or 'exception' to quickly find the root cause.</practice>
+        <practice>Always specify run ID explicitly to avoid interactive selection prompts.</practice>
+      </best_practices>
+    </tool>
+
+    <tool name="gh pr checkout">
+      <best_practices>
+        <practice>Always use --force flag to avoid interactive branch selection.</practice>
+        <practice>Format: 'gh pr checkout <pr_number> --force'</practice>
+        <practice>If gh checkout fails, fallback to git fetch + checkout pattern.</practice>
+      </best_practices>
+      <non_interactive_alternatives>
+        <alternative>git fetch origin pull/<pr_number>/head:<branch_name></alternative>
+        <alternative>git checkout <branch_name></alternative>
+      </non_interactive_alternatives>
+    </tool>
+
+    <tool name="git operations">
+      <best_practices>
+        <practice>Use explicit git configuration for automated commits.</practice>
+        <practice>Format: 'git -c user.name="PR Fixer" -c user.email="pr-fixer@local" commit'</practice>
+        <practice>Use --force-with-lease for safer force pushing.</practice>
+        <practice>Check git status programmatically with --porcelain flag.</practice>
+        <practice>Use git rebase --dry-run to detect conflicts before attempting rebase.</practice>
+      </best_practices>
+      <conflict_resolution>
+        <step>Use 'git rebase --dry-run main' to detect conflicts</step>
+        <step>If conflicts detected, resolve manually via file editing</step>
+        <step>Use 'git status --porcelain' to identify conflicted files</step>
+        <step>Edit files to resolve conflicts, removing conflict markers</step>
+        <step>Use 'git add .' and commit with explicit author info</step>
+      </conflict_resolution>
+    </tool>
+
+    <tool name="gh pr checks">
+      <best_practices>
+        <practice>Use --json flag to get structured output instead of interactive watch.</practice>
+        <practice>Format: 'gh pr checks <pr_number> --json state,conclusion,name'</practice>
+        <practice>Poll periodically instead of using --watch for automated workflows.</practice>
+        <practice>Use 'gh run list --pr <pr_number>' to get detailed workflow status.</practice>
       </best_practices>
     </tool>
     
@@ -44,6 +88,35 @@
         <practice>Provide clear, actionable next steps as suggestions.</practice>
         <practice>Example suggestions: "Address review comments first.", "Tackle the failing tests.", "Resolve merge conflicts."</practice>
       </best_practices>
+    </tool>
+
+    <tool name="new_task (mode: translate)">
+      <best_practices>
+        <practice>Use when PR fixes involve changes to user-facing strings, i18n files, or UI components.</practice>
+        <practice>Provide specific details about what content needs translation in the message.</practice>
+        <practice>Include file paths and descriptions of the changes made.</practice>
+        <practice>List all affected languages that need updates.</practice>
+        <practice>Wait for translation completion before proceeding to validation phase.</practice>
+      </best_practices>
+      <when_to_use>
+        <trigger>Changes to webview-ui/src/i18n/locales/en/*.json files</trigger>
+        <trigger>Changes to src/i18n/locales/en/*.json files</trigger>
+        <trigger>Modifications to UI components with user-facing text</trigger>
+        <trigger>Updates to announcement files or documentation requiring localization</trigger>
+        <trigger>Addition of new error messages or user notifications</trigger>
+      </when_to_use>
+      <example_usage><![CDATA[
+<new_task>
+<mode>translate</mode>
+<message>Translation updates needed for PR #1234 fixes. Please translate the following changes:
+
+Files modified:
+- webview-ui/src/i18n/locales/en/common.json: Added new error message "connection_failed"
+- webview-ui/src/components/settings/ApiSettings.tsx: Updated button text from "Save" to "Save Configuration"
+
+Please ensure all supported languages (ca, de, es, fr, hi, id, it, ja, ko, nl, pl, pt-BR, ru, tr, vi, zh-CN, zh-TW) are updated with appropriate translations for these changes.</message>
+</new_task>
+      ]]></example_usage>
     </tool>
   </tool_specific_guidance>
 </tool_usage_guide>

@@ -24,31 +24,75 @@
       </command>
     </template>
   </pattern>
-  <pattern name="resolving_conflicts_rebase">
-    <usage>A sequence of commands to resolve merge conflicts locally using rebase.</usage>
+  <pattern name="detecting_conflicts">
+    <usage>Commands to detect merge conflicts without interactive operations.</usage>
     <template>
       <command tool="git">git checkout main</command>
       <command tool="git">git pull origin main</command>
       <command tool="git">git checkout <pr_branch></command>
+      <command tool="git">git merge-base main HEAD</command>
+      <command tool="git">git diff --name-only main...HEAD</command>
+      <comment>Check if rebase would create conflicts (dry run)</comment>
+      <command tool="git">git rebase --dry-run main</command>
+    </template>
+  </pattern>
+  
+  <pattern name="non_interactive_rebase">
+    <usage>Non-interactive rebase operations for when no conflicts are detected.</usage>
+    <template>
+      <command tool="git">git checkout <pr_branch></command>
       <command tool="git">git rebase main</command>
-      <comment>After resolving conflicts manually, continue the rebase.</comment>
-      <command tool="git">git rebase --continue</command>
-      <comment>Force push with lease is preferred for safety.</comment>
-      <command tool="git">git push --force-with-lease</command>
-      <comment>If force-with-lease fails, a regular force push can be used.</comment>
-      <command tool="git">git push --force</command>
+      <comment>Only proceed if rebase succeeds without conflicts</comment>
+      <command tool="git">git push --force-with-lease origin <pr_branch></command>
+    </template>
+  </pattern>
+  
+  <pattern name="conflict_status_check">
+    <usage>Check current conflict status without interactive input.</usage>
+    <template>
+      <command tool="git">git status --porcelain</command>
+      <command tool="git">git diff --name-only --diff-filter=U</command>
+      <comment>List files with unresolved conflicts</comment>
+      <command tool="git">git ls-files --unmerged</command>
     </template>
   </pattern>
   <pattern name="checking_out_pr">
-    <usage>Command to check out a pull request branch locally.</usage>
+    <usage>Command to check out a pull request branch locally without interactive prompts.</usage>
     <template>
-      <command tool="gh">gh pr checkout <pr_number_or_url></command>
+      <command tool="gh">gh pr checkout <pr_number_or_url> --force</command>
+      <comment>Alternative: Use git commands if gh checkout fails</comment>
+      <command tool="git">git fetch origin pull/<pr_number>/head:<branch_name></command>
+      <command tool="git">git checkout <branch_name></command>
     </template>
   </pattern>
-  <pattern name="watching_pr_checks">
-    <usage>After pushing changes, use this command to monitor the CI/CD pipeline in real-time.</usage>
+  
+  <pattern name="non_interactive_checks">
+    <usage>Check PR status without interactive monitoring.</usage>
     <template>
-      <command tool="gh">gh pr checks --watch</command>
+      <command tool="gh">gh pr checks <pr_number> --json state,conclusion,name,detailsUrl</command>
+      <comment>Get specific check details without interactive watch</comment>
+      <command tool="gh">gh run list --pr <pr_number> --json databaseId,status,conclusion</command>
+    </template>
+  </pattern>
+  
+  <pattern name="safe_push_operations">
+    <usage>Push operations that avoid interactive prompts and credential issues.</usage>
+    <template>
+      <command tool="git">git push --force-with-lease origin <branch_name></command>
+      <comment>If force-with-lease fails, check remote state first</comment>
+      <command tool="git">git fetch origin <branch_name></command>
+      <command tool="git">git status --porcelain</command>
+      <command tool="git">git push --force origin <branch_name></command>
+    </template>
+  </pattern>
+
+  <pattern name="automated_commit_operations">
+    <usage>Commit operations that work in automated environments.</usage>
+    <template>
+      <command tool="git">git add .</command>
+      <command tool="git">git -c user.name="PR Fixer" -c user.email="pr-fixer@local" commit -m "<commit_message>"</command>
+      <comment>Alternative with explicit author if needed</comment>
+      <command tool="git">git commit --author="PR Fixer <pr-fixer@local>" -m "<commit_message>"</command>
     </template>
   </pattern>
 </common_patterns>

@@ -1561,7 +1561,7 @@ export class Task extends EventEmitter<ClineEvents> {
 		}
 	}
 
-	private async getSystemPrompt(): Promise<string> {
+	private async getSystemPrompt(isAnthropicClaudeSonnet4?: boolean): Promise<string> {
 		const { mcpEnabled } = (await this.providerRef.deref()?.getState()) ?? {}
 		let mcpHub: McpHub | undefined
 		if (mcpEnabled ?? true) {
@@ -1629,6 +1629,7 @@ export class Task extends EventEmitter<ClineEvents> {
 				{
 					maxConcurrentFileReads,
 				},
+				isAnthropicClaudeSonnet4,
 			)
 		})()
 	}
@@ -1646,10 +1647,10 @@ export class Task extends EventEmitter<ClineEvents> {
 			profileThresholds = {},
 		} = state ?? {}
 		
-		const debugApiProvider = apiConfiguration?.apiProvider
-		const debugApiModelId = apiConfiguration?.apiModelId
-
-		console.log(`[Task.ts attemptApiRequest] with apiProvider: ${debugApiProvider}, apiModelId: ${debugApiModelId}`)
+		const featureApiProvider = apiConfiguration?.apiProvider
+		const featureApiModelId = apiConfiguration?.apiModelId
+		const isAnthropicClaudeSonnet4 = featureApiProvider === "anthropic" && featureApiModelId === "claude-sonnet-4-20250514"
+		console.log(`[Task.ts attemptApiRequest] with apiProvider: ${featureApiProvider}, apiModelId: ${featureApiModelId}, isAnthropicClaudeSonnet4: ${isAnthropicClaudeSonnet4}`)
 
 		// Get condensing configuration for automatic triggers
 		const customCondensingPrompt = state?.customCondensingPrompt
@@ -1697,7 +1698,7 @@ export class Task extends EventEmitter<ClineEvents> {
 		// requests — even from new subtasks — will honour the provider's rate-limit.
 		Task.lastGlobalApiRequestTime = Date.now()
 
-		const systemPrompt = await this.getSystemPrompt()
+		const systemPrompt = await this.getSystemPrompt(isAnthropicClaudeSonnet4)
 		const { contextTokens } = this.getTokenUsage()
 
 		if (contextTokens) {

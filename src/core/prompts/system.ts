@@ -44,6 +44,7 @@ async function generatePrompt(
 	rooIgnoreInstructions?: string,
 	partialReadsEnabled?: boolean,
 	settings?: Record<string, any>,
+	isAnthropicClaudeSonnet4?: boolean,
 ): Promise<string> {
 	if (!context) {
 		throw new Error("Extension context is required for generating system prompt")
@@ -59,33 +60,37 @@ async function generatePrompt(
 	const [modesSection, mcpServersSection] = await Promise.all([
 		getModesSection(context),
 		modeConfig.groups.some((groupEntry) => getGroupName(groupEntry) === "mcp")
-			? getMcpServersSection(mcpHub, effectiveDiffStrategy, enableMcpServerCreation)
+			? getMcpServersSection(mcpHub, effectiveDiffStrategy, enableMcpServerCreation, isAnthropicClaudeSonnet4)
 			: Promise.resolve(""),
 	])
 
 	const codeIndexManager = CodeIndexManager.getInstance(context)
+	
+		
+	const sharedToolUseSection = isAnthropicClaudeSonnet4 ? "" : `${getSharedToolUseSection()}`;
+	const toolDescriptionsSection = isAnthropicClaudeSonnet4 ? "" : `${getToolDescriptionsForMode(
+		mode,
+		cwd,
+		supportsComputerUse,
+		codeIndexManager,
+		effectiveDiffStrategy,
+		browserViewportSize,
+		mcpHub,
+		customModeConfigs,
+		experiments,
+		partialReadsEnabled,
+		settings,
+	)}`;
 
 	const basePrompt = `${roleDefinition}
 
 ${markdownFormattingSection()}
 
-${getSharedToolUseSection()}
+${sharedToolUseSection}
 
-${getToolDescriptionsForMode(
-	mode,
-	cwd,
-	supportsComputerUse,
-	codeIndexManager,
-	effectiveDiffStrategy,
-	browserViewportSize,
-	mcpHub,
-	customModeConfigs,
-	experiments,
-	partialReadsEnabled,
-	settings,
-)}
+${toolDescriptionsSection}
 
-${getToolUseGuidelinesSection(codeIndexManager)}
+${getToolUseGuidelinesSection(codeIndexManager, isAnthropicClaudeSonnet4)}
 
 ${mcpServersSection}
 
@@ -122,6 +127,7 @@ export const SYSTEM_PROMPT = async (
 	rooIgnoreInstructions?: string,
 	partialReadsEnabled?: boolean,
 	settings?: Record<string, any>,
+	isAnthropicClaudeSonnet4?: boolean,
 ): Promise<string> => {
 	if (!context) {
 		throw new Error("Extension context is required for generating system prompt")
@@ -195,5 +201,6 @@ ${customInstructions}`
 		rooIgnoreInstructions,
 		partialReadsEnabled,
 		settings,
+		isAnthropicClaudeSonnet4,
 	)
 }

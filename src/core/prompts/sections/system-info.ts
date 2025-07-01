@@ -5,7 +5,8 @@ import { getShell } from "../../../utils/shell"
 
 export function getSystemInfoSection(cwd: string, isAnthropicClaudeSonnet4?: boolean): string {
 	
-	const list_files_name = isAnthropicClaudeSonnet4 ? "view" : "list_files"
+	// todo: test claude native editor tools later: https://docs.anthropic.com/en/docs/agents-and-tools/tool-use/text-editor-tool
+	const list_files_name = isAnthropicClaudeSonnet4 ? "list_files" : "list_files"
 	
 	let details = `====
 

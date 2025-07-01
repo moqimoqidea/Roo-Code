@@ -18,6 +18,7 @@ import { getModelParams } from "../transform/model-params"
 import { BaseProvider } from "./base-provider"
 import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from "../index"
 import { calculateApiCostAnthropic } from "../../shared/cost"
+import { EXTEND_ANTHROPIC_TOOLS } from "../../shared/extend-anthropic-tools"
 
 export class AnthropicHandler extends BaseProvider implements SingleCompletionHandler {
 	private options: ApiHandlerOptions
@@ -79,6 +80,8 @@ export class AnthropicHandler extends BaseProvider implements SingleCompletionHa
 						thinking,
 						// Setting cache breakpoint for system prompt so new tasks can reuse it.
 						system: [{ text: systemPrompt, type: "text", cache_control: cacheControl }],
+						// fixme: fix types for anthropic sdk later
+						tools: EXTEND_ANTHROPIC_TOOLS as any,
 						messages: messages.map((message, index) => {
 							if (index === lastUserMsgIndex || index === secondLastMsgUserIndex) {
 								return {

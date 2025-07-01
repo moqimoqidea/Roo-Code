@@ -11,8 +11,9 @@ export function getCapabilitiesSection(
 	isAnthropicClaudeSonnet4?: boolean,
 ): string {
 	
-	const read_file_name = isAnthropicClaudeSonnet4 ? "view" : "read_file"
-	const list_files_name = isAnthropicClaudeSonnet4 ? "view" : "list_files"
+	// todo: test claude native editor tools later: https://docs.anthropic.com/en/docs/agents-and-tools/tool-use/text-editor-tool
+	const read_file_name = isAnthropicClaudeSonnet4 ? "read_file" : "read_file"
+	const list_files_name = isAnthropicClaudeSonnet4 ? "list_files" : "list_files"
 	
 	return `====
 

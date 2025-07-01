@@ -62,8 +62,9 @@ export function getRulesSection(
 		? "- **CRITICAL: When you need to understand existing code or functionality, ALWAYS use the `codebase_search` tool FIRST before using search_files or other file exploration tools.** The codebase_search tool uses semantic search to find relevant code based on meaning, not just keywords, making it much more effective for understanding how features are implemented.\n"
 		: ""
 	
-	const read_file_name = isAnthropicClaudeSonnet4 ? "view" : "read_file"
-	const list_files_name = isAnthropicClaudeSonnet4 ? "view" : "list_files"
+	// todo: test claude native editor tools later: https://docs.anthropic.com/en/docs/agents-and-tools/tool-use/text-editor-tool
+	const read_file_name = isAnthropicClaudeSonnet4 ? "read_file" : "read_file"
+	const list_files_name = isAnthropicClaudeSonnet4 ? "list_files" : "list_files"
 
 	return `====
 

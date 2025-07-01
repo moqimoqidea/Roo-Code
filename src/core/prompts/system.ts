@@ -94,13 +94,13 @@ ${getToolUseGuidelinesSection(codeIndexManager, isAnthropicClaudeSonnet4)}
 
 ${mcpServersSection}
 
-${getCapabilitiesSection(cwd, supportsComputerUse, mcpHub, effectiveDiffStrategy, codeIndexManager)}
+${getCapabilitiesSection(cwd, supportsComputerUse, mcpHub, effectiveDiffStrategy, codeIndexManager, isAnthropicClaudeSonnet4)}
 
 ${modesSection}
 
-${getRulesSection(cwd, supportsComputerUse, effectiveDiffStrategy, codeIndexManager)}
+${getRulesSection(cwd, supportsComputerUse, effectiveDiffStrategy, codeIndexManager, isAnthropicClaudeSonnet4)}
 
-${getSystemInfoSection(cwd)}
+${getSystemInfoSection(cwd, isAnthropicClaudeSonnet4)}
 
 ${getObjectiveSection(codeIndexManager, experiments)}
 

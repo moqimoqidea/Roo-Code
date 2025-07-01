@@ -58,7 +58,7 @@ async function generatePrompt(
 	const { roleDefinition, baseInstructions } = getModeSelection(mode, promptComponent, customModeConfigs)
 
 	const [modesSection, mcpServersSection] = await Promise.all([
-		getModesSection(context),
+		getModesSection(context, isAnthropicClaudeSonnet4),
 		modeConfig.groups.some((groupEntry) => getGroupName(groupEntry) === "mcp")
 			? getMcpServersSection(mcpHub, effectiveDiffStrategy, enableMcpServerCreation, isAnthropicClaudeSonnet4)
 			: Promise.resolve(""),

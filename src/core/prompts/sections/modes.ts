@@ -6,7 +6,7 @@ import type { ModeConfig } from "@roo-code/types"
 
 import { getAllModesWithPrompts } from "../../../shared/modes"
 
-export async function getModesSection(context: vscode.ExtensionContext): Promise<string> {
+export async function getModesSection(context: vscode.ExtensionContext, isAnthropicClaudeSonnet4?: boolean): Promise<string> {
 	const settingsDir = path.join(context.globalStorageUri.fsPath, "settings")
 	await fs.mkdir(settingsDir, { recursive: true })
 
@@ -38,6 +38,17 @@ If the user asks you to create or edit a new mode for this project, you should r
 <task>create_mode</task>
 </fetch_instructions>
 `
+	const baseModeToolSection = "If the user asks you to create or edit a new mode for this project, you should read the instructions by using the fetch_instructions tool."
+	
+	const xmlExampleModeToolSection = `
+ like this:
+<fetch_instructions>
+<task>create_mode</task>
+</fetch_instructions>`
 
-	return modesContent
+	if (isAnthropicClaudeSonnet4) {
+		return modesContent + baseModeToolSection
+	} else {
+		return modesContent + baseModeToolSection + xmlExampleModeToolSection
+	}
 }

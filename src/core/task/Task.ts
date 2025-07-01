@@ -1645,6 +1645,11 @@ export class Task extends EventEmitter<ClineEvents> {
 			autoCondenseContextPercent = 100,
 			profileThresholds = {},
 		} = state ?? {}
+		
+		const debugApiProvider = apiConfiguration?.apiProvider
+		const debugApiModelId = apiConfiguration?.apiModelId
+
+		console.log(`[Task.ts attemptApiRequest] with apiProvider: ${debugApiProvider}, apiModelId: ${debugApiModelId}`)
 
 		// Get condensing configuration for automatic triggers
 		const customCondensingPrompt = state?.customCondensingPrompt

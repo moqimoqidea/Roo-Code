@@ -203,7 +203,7 @@ export class AnthropicHandler extends BaseProvider implements SingleCompletionHa
 						case "tool_use":
 							// Handle anthropic native tool use start
 							yield {
-								type: "tool_use",
+								type: "anthropic_tool_use",
 								id: chunk.content_block.id,
 								name: chunk.content_block.name,
 								input: chunk.content_block.input
@@ -222,7 +222,7 @@ export class AnthropicHandler extends BaseProvider implements SingleCompletionHa
 						case "input_json_delta":
 							// Handle anthropic native tool use input delta
 							yield {
-								type: "tool_use_delta",
+								type: "anthropic_tool_use_delta",
 								partial_json: chunk.delta.partial_json
 							}
 							break

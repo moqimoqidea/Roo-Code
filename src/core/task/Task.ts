@@ -1362,6 +1362,8 @@ export class Task extends EventEmitter<ClineEvents> {
 							break
 						case "text": {
 							assistantMessage += chunk.text
+							
+							// console.log(`[Task.ts recursivelyMakeClineRequests] with assistantMessage: ${assistantMessage}, chunk.text: ${chunk.text}`)
 
 							// Parse raw assistant message into content blocks.
 							const prevLength = this.assistantMessageContent.length
@@ -1375,6 +1377,22 @@ export class Task extends EventEmitter<ClineEvents> {
 
 							// Present content to user.
 							presentAssistantMessage(this)
+							break
+						}
+						case "anthropic_tool_use": {
+							const id = chunk.id
+							const name = chunk.name
+							const input = chunk.input
+							
+							console.log(`[Task.ts recursivelyMakeClineRequests] with id: ${id}, name: ${name}, input: ${JSON.stringify(input)}`)
+							
+							break
+						}
+						case "anthropic_tool_use_delta": {
+							const partial_json = chunk.partial_json
+							
+							console.log(`[Task.ts recursivelyMakeClineRequests] with partial_json: ${partial_json}`)
+							
 							break
 						}
 					}

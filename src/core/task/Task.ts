@@ -85,6 +85,7 @@ import { processUserContentMentions } from "../mentions/processUserContentMentio
 import { ApiMessage } from "../task-persistence/apiMessages"
 import { getMessagesSinceLastSummary, summarizeConversation } from "../condense"
 import { maybeRemoveImageBlocks } from "../../api/transform/image-cleaning"
+import { AnthropicToolHandler } from "../anthropic-tools"
 
 export type ClineEvents = {
 	message: [{ action: "created" | "updated"; message: ClineMessage }]
@@ -142,6 +143,7 @@ export class Task extends EventEmitter<ClineEvents> {
 	api: ApiHandler
 	private static lastGlobalApiRequestTime?: number
 	private consecutiveAutoApprovedRequestsCount: number = 0
+	private anthropicToolHandler: AnthropicToolHandler
 
 	/**
 	 * Reset the global API request timestamp. This should only be used for testing.
@@ -196,11 +198,12 @@ export class Task extends EventEmitter<ClineEvents> {
 	assistantMessageContent: AssistantMessageContent[] = []
 	presentAssistantMessageLocked = false
 	presentAssistantMessageHasPendingUpdates = false
-	userMessageContent: (Anthropic.TextBlockParam | Anthropic.ImageBlockParam)[] = []
+	userMessageContent: (Anthropic.TextBlockParam | Anthropic.ImageBlockParam | Anthropic.ToolResultBlockParam)[] = []
 	userMessageContentReady = false
 	didRejectTool = false
 	didAlreadyUseTool = false
 	didCompleteReadingStream = false
+	currentToolUseId: string | null = null
 
 	constructor({
 		provider,
@@ -282,6 +285,7 @@ export class Task extends EventEmitter<ClineEvents> {
 		}
 
 		this.toolRepetitionDetector = new ToolRepetitionDetector(this.consecutiveMistakeLimit)
+		this.anthropicToolHandler = new AnthropicToolHandler()
 
 		onCreated?.(this)
 
@@ -1329,6 +1333,8 @@ export class Task extends EventEmitter<ClineEvents> {
 			this.didAlreadyUseTool = false
 			this.presentAssistantMessageLocked = false
 			this.presentAssistantMessageHasPendingUpdates = false
+			this.currentToolUseId = null
+			this.anthropicToolHandler.clear()
 
 			await this.diffViewProvider.reset()
 
@@ -1386,12 +1392,18 @@ export class Task extends EventEmitter<ClineEvents> {
 							
 							console.log(`[Task.ts recursivelyMakeClineRequests] with id: ${id}, name: ${name}, input: ${JSON.stringify(input)}`)
 							
+							// Handle tool use start with AnthropicToolHandler
+							this.anthropicToolHandler.handleToolUseStart(id, name, input)
+							
 							break
 						}
 						case "anthropic_tool_use_delta": {
 							const partial_json = chunk.partial_json
 							
 							console.log(`[Task.ts recursivelyMakeClineRequests] with partial_json: ${partial_json}`)
+							
+							// Handle tool use delta with AnthropicToolHandler
+							this.anthropicToolHandler.handleToolUseDelta(partial_json)
 							
 							break
 						}
@@ -1482,6 +1494,20 @@ export class Task extends EventEmitter<ClineEvents> {
 			}
 
 			this.didCompleteReadingStream = true
+
+			// Mark all Anthropic tool uses as complete when stream ends
+			this.anthropicToolHandler.markAllToolUsesComplete()
+
+			// Process any completed Anthropic tool uses
+			const completedToolUses = this.anthropicToolHandler.getCompletedToolUses()
+			for (const toolUse of completedToolUses) {
+				// Convert to XML and append to assistant message
+				const xmlToolUse = this.anthropicToolHandler.convertToolUseToXml(toolUse)
+				assistantMessage += '\n\n' + xmlToolUse
+				
+				// Re-parse the updated assistant message to include the new tool use
+				this.assistantMessageContent = parseAssistantMessage(assistantMessage)
+			}
 
 			// Set any blocks to be complete to allow `presentAssistantMessage`
 			// to finish and set `userMessageContentReady` to true.

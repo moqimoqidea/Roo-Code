@@ -150,6 +150,12 @@ export async function presentAssistantMessage(cline: Task) {
 			break
 		}
 		case "tool_use":
+			// Extract tool_use_id if present (from Anthropic native tool use)
+			const toolUseId = cline.anthropicToolHandler.getToolUseIdByName(block.name)
+			if (toolUseId) {
+				cline.currentToolUseId = toolUseId
+			}
+
 			const toolDescription = (): string => {
 				switch (block.name) {
 					case "execute_command":
@@ -243,12 +249,22 @@ export async function presentAssistantMessage(cline: Task) {
 			}
 
 			const pushToolResult = (content: ToolResponse) => {
-				cline.userMessageContent.push({ type: "text", text: `${toolDescription()} Result:` })
-
-				if (typeof content === "string") {
-					cline.userMessageContent.push({ type: "text", text: content || "(tool did not return anything)" })
+				// Check if we have a tool_use_id from Anthropic native tool use
+				if (cline.currentToolUseId) {
+					// Create Anthropic tool result format
+					const toolResult = cline.anthropicToolHandler.createToolResult(cline.currentToolUseId, content)
+					cline.userMessageContent.push(toolResult)
+					// Clear the tool_use_id after use
+					cline.currentToolUseId = null
 				} else {
-					cline.userMessageContent.push(...content)
+					// Use traditional XML format
+					cline.userMessageContent.push({ type: "text", text: `${toolDescription()} Result:` })
+
+					if (typeof content === "string") {
+						cline.userMessageContent.push({ type: "text", text: content || "(tool did not return anything)" })
+					} else {
+						cline.userMessageContent.push(...content)
+					}
 				}
 
 				// Once a tool result has been collected, ignore all other tool

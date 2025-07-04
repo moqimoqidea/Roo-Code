@@ -202,11 +202,17 @@ export class AnthropicHandler extends BaseProvider implements SingleCompletionHa
 							break
 						case "tool_use":
 							// Handle anthropic native tool use start
+							const id = chunk.content_block.id
+							const name = chunk.content_block.name
+							const input = chunk.content_block.input
+
+							console.log(`[anthropic createMessage] with id: ${id}, name: ${name}, input: ${JSON.stringify(input)}`)
+
 							yield {
 								type: "anthropic_tool_use",
-								id: chunk.content_block.id,
-								name: chunk.content_block.name,
-								input: chunk.content_block.input
+								id: id,
+								name: name,
+								input: input
 							}
 							break
 					}

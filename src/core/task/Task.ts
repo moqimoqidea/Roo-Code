@@ -1377,6 +1377,22 @@ export class Task extends EventEmitter<ClineEvents> {
 							presentAssistantMessage(this)
 							break
 						}
+						case "anthropic_tool_use": {
+							const id = chunk.id
+							const name = chunk.name
+							const input = chunk.input
+							
+							console.log(`[Task.ts recursivelyMakeClineRequests] with id: ${id}, name: ${name}, input: ${JSON.stringify(input)}`)
+							
+							break
+						}
+						case "anthropic_tool_use_delta": {
+							const partial_json = chunk.partial_json
+							
+							console.log(`[Task.ts recursivelyMakeClineRequests] with partial_json: ${partial_json}`)
+							
+							break
+						}
 					}
 
 					if (this.abort) {
@@ -1646,10 +1662,10 @@ export class Task extends EventEmitter<ClineEvents> {
 			profileThresholds = {},
 		} = state ?? {}
 		
-		const debugApiProvider = apiConfiguration?.apiProvider
-		const debugApiModelId = apiConfiguration?.apiModelId
-
-		console.log(`[Task.ts attemptApiRequest] with apiProvider: ${debugApiProvider}, apiModelId: ${debugApiModelId}`)
+		const featureApiProvider = apiConfiguration?.apiProvider
+		const featureApiModelId = apiConfiguration?.apiModelId
+		const isAnthropicClaudeSonnet4 = featureApiProvider === "anthropic" && featureApiModelId === "claude-sonnet-4-20250514"
+		console.log(`[Task.ts attemptApiRequest] with apiProvider: ${featureApiProvider}, apiModelId: ${featureApiModelId}, isAnthropicClaudeSonnet4: ${isAnthropicClaudeSonnet4}`)
 
 		// Get condensing configuration for automatic triggers
 		const customCondensingPrompt = state?.customCondensingPrompt

@@ -85,6 +85,7 @@ import { processUserContentMentions } from "../mentions/processUserContentMentio
 import { ApiMessage } from "../task-persistence/apiMessages"
 import { getMessagesSinceLastSummary, summarizeConversation } from "../condense"
 import { maybeRemoveImageBlocks } from "../../api/transform/image-cleaning"
+import { getClaudeSonnet4SystemPrompt } from "../prompts/sections/claude-sonnet-4-system-prompt"
 
 export type ClineEvents = {
 	message: [{ action: "created" | "updated"; message: ClineMessage }]
@@ -1577,7 +1578,12 @@ export class Task extends EventEmitter<ClineEvents> {
 		}
 	}
 
-	private async getSystemPrompt(): Promise<string> {
+	private async getSystemPrompt(isAnthropicClaudeSonnet4?: boolean): Promise<string> {
+		
+		if (isAnthropicClaudeSonnet4) {
+			return getClaudeSonnet4SystemPrompt(this.cwd)
+		}
+		
 		const { mcpEnabled } = (await this.providerRef.deref()?.getState()) ?? {}
 		let mcpHub: McpHub | undefined
 		if (mcpEnabled ?? true) {
@@ -1713,7 +1719,7 @@ export class Task extends EventEmitter<ClineEvents> {
 		// requests — even from new subtasks — will honour the provider's rate-limit.
 		Task.lastGlobalApiRequestTime = Date.now()
 
-		const systemPrompt = await this.getSystemPrompt()
+		const systemPrompt = await this.getSystemPrompt(isAnthropicClaudeSonnet4)
 		const { contextTokens } = this.getTokenUsage()
 
 		if (contextTokens) {

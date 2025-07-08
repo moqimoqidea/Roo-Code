@@ -140,6 +140,7 @@ export class Task extends EventEmitter<ClineEvents> {
 
 	// API
 	readonly apiConfiguration: ProviderSettings
+	readonly isAnthropicClaudeSonnet4: boolean
 	api: ApiHandler
 	private static lastGlobalApiRequestTime?: number
 	private consecutiveAutoApprovedRequestsCount: number = 0
@@ -242,6 +243,9 @@ export class Task extends EventEmitter<ClineEvents> {
 		})
 
 		this.apiConfiguration = apiConfiguration
+		this.isAnthropicClaudeSonnet4 = apiConfiguration?.apiProvider === "anthropic" && apiConfiguration?.apiModelId === "claude-sonnet-4-20250514"
+		console.log(`[Task.ts Task Constructor], isAnthropicClaudeSonnet4: ${this.isAnthropicClaudeSonnet4}`)
+		
 		this.api = buildApiHandler(apiConfiguration)
 
 		this.urlContentFetcher = new UrlContentFetcher(provider.context)
@@ -1578,9 +1582,10 @@ export class Task extends EventEmitter<ClineEvents> {
 		}
 	}
 
-	private async getSystemPrompt(isAnthropicClaudeSonnet4?: boolean): Promise<string> {
+	private async getSystemPrompt(): Promise<string> {
+		console.log(`[Task.ts getSystemPrompt] isAnthropicClaudeSonnet4: ${this.isAnthropicClaudeSonnet4}`)
 		
-		if (isAnthropicClaudeSonnet4) {
+		if (this.isAnthropicClaudeSonnet4) {
 			return getClaudeSonnet4SystemPrompt(this.cwd)
 		}
 		
@@ -1668,11 +1673,6 @@ export class Task extends EventEmitter<ClineEvents> {
 			profileThresholds = {},
 		} = state ?? {}
 		
-		const featureApiProvider = apiConfiguration?.apiProvider
-		const featureApiModelId = apiConfiguration?.apiModelId
-		const isAnthropicClaudeSonnet4 = featureApiProvider === "anthropic" && featureApiModelId === "claude-sonnet-4-20250514"
-		console.log(`[Task.ts attemptApiRequest] with apiProvider: ${featureApiProvider}, apiModelId: ${featureApiModelId}, isAnthropicClaudeSonnet4: ${isAnthropicClaudeSonnet4}`)
-
 		// Get condensing configuration for automatic triggers
 		const customCondensingPrompt = state?.customCondensingPrompt
 		const condensingApiConfigId = state?.condensingApiConfigId
@@ -1719,7 +1719,7 @@ export class Task extends EventEmitter<ClineEvents> {
 		// requests — even from new subtasks — will honour the provider's rate-limit.
 		Task.lastGlobalApiRequestTime = Date.now()
 
-		const systemPrompt = await this.getSystemPrompt(isAnthropicClaudeSonnet4)
+		const systemPrompt = await this.getSystemPrompt()
 		const { contextTokens } = this.getTokenUsage()
 
 		if (contextTokens) {

@@ -2,7 +2,15 @@ import { type ToolName, toolNames } from "@roo-code/types"
 
 import { TextContent, ToolUse, ToolParamName, toolParamNames } from "../../shared/tools"
 
-export type AssistantMessageContent = TextContent | ToolUse
+export type AnthropicToolUse = {
+	type: "anthropic_tool_use"
+	id: string
+	name: string
+	input: Record<string, any>
+	partial: boolean
+}
+
+export type AssistantMessageContent = TextContent | ToolUse | AnthropicToolUse
 
 export function parseAssistantMessage(assistantMessage: string): AssistantMessageContent[] {
 	let contentBlocks: AssistantMessageContent[] = []

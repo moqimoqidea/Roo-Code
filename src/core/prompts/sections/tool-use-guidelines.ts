@@ -1,12 +1,18 @@
 import { CodeIndexManager } from "../../../services/code-index/manager"
 
-export function getToolUseGuidelinesSection(codeIndexManager?: CodeIndexManager): string {
+export function getToolUseGuidelinesSection(codeIndexManager?: CodeIndexManager, isAnthropicClaudeSonnet4?: boolean,): string {
 	const isCodebaseSearchAvailable =
 		codeIndexManager &&
 		codeIndexManager.isFeatureEnabled &&
 		codeIndexManager.isFeatureConfigured &&
 		codeIndexManager.isInitialized
 
+	console.log(`[tool-use-guidelines.ts getToolUseGuidelinesSection] with isAnthropicClaudeSonnet4: ${isAnthropicClaudeSonnet4}`)
+	
+	const baseChooseToolDesc = "Choose the most appropriate tool based on the task and the tool descriptions provided. Assess if you need additional information to proceed, and which of the available tools would be most effective for gathering this information."
+	const chooseToolDesc = isAnthropicClaudeSonnet4 ?
+		baseChooseToolDesc : baseChooseToolDesc + " For example using the list_files tool is more effective than running a command like \`ls\` in the terminal. It's critical that you think about each available tool and use the one that best fits the current step in the task."
+	
 	// Build guidelines array with automatic numbering
 	let itemNumber = 1
 	const guidelinesList: string[] = []
@@ -22,11 +28,11 @@ export function getToolUseGuidelinesSection(codeIndexManager?: CodeIndexManager)
 			`${itemNumber++}. **IMPORTANT: When starting a new task or when you need to understand existing code/functionality, you MUST use the \`codebase_search\` tool FIRST before any other search tools.** This semantic search tool helps you find relevant code based on meaning rather than just keywords. Only after using codebase_search should you use other tools like search_files, list_files, or read_file for more specific exploration.`,
 		)
 		guidelinesList.push(
-			`${itemNumber++}. Choose the most appropriate tool based on the task and the tool descriptions provided. Assess if you need additional information to proceed, and which of the available tools would be most effective for gathering this information. For example using the list_files tool is more effective than running a command like \`ls\` in the terminal. It's critical that you think about each available tool and use the one that best fits the current step in the task.`,
+			`${itemNumber++}. ${chooseToolDesc}`,
 		)
 	} else {
 		guidelinesList.push(
-			`${itemNumber++}. Choose the most appropriate tool based on the task and the tool descriptions provided. Assess if you need additional information to proceed, and which of the available tools would be most effective for gathering this information. For example using the list_files tool is more effective than running a command like \`ls\` in the terminal. It's critical that you think about each available tool and use the one that best fits the current step in the task.`,
+			`${itemNumber++}. ${chooseToolDesc}`,
 		)
 	}
 

@@ -64,16 +64,23 @@ export function convertAnthropicToolUseToXml(toolUse: AnthropicToolUse): string 
 		if (input.args && Array.isArray(input.args)) {
 			console.log(`[convertAnthropicToolUseToXml] Found args array with ${input.args.length} items`)
 			
-			// Expand array items into individual XML tags
+			// Create proper nested XML structure for tools that expect <args><file>...</file></args>
+			xmlContent += `<args>\n`
+			
 			for (const arg of input.args) {
+				// Wrap each argument object in a <file> tag for tools like read_file
+				xmlContent += `<file>\n`
 				for (const [key, value] of Object.entries(arg)) {
 					if (typeof value === 'string') {
-						xmlContent += `<${key}>\n${value}\n</${key}>\n`
+						xmlContent += `<${key}>${value}</${key}>\n`
 					} else if (value !== null && value !== undefined) {
-						xmlContent += `<${key}>\n${JSON.stringify(value, null, 2)}\n</${key}>\n`
+						xmlContent += `<${key}>${JSON.stringify(value)}</${key}>\n`
 					}
 				}
+				xmlContent += `</file>\n`
 			}
+			
+			xmlContent += `</args>\n`
 		} else {
 			console.log(`[convertAnthropicToolUseToXml] Processing direct input parameters`)
 			

@@ -185,7 +185,7 @@ export class AnthropicToolUseAccumulator {
 		if (existing && !existing.completed) {
 			const prevLength = existing.inputJson.length
 			existing.inputJson += partialJson
-			console.log(`[AnthropicToolUseAccumulator] Added delta to ${id}: "${partialJson}" (total length: ${prevLength} → ${existing.inputJson.length})`)
+			// console.log(`[AnthropicToolUseAccumulator] Added delta to ${id}: "${partialJson}" (total length: ${prevLength} → ${existing.inputJson.length})`)
 		}
 	}
 

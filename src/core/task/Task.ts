@@ -1441,12 +1441,12 @@ export class Task extends EventEmitter<ClineEvents> {
 						case "anthropic_tool_use_delta": {
 							const partial_json = chunk.partial_json
 							
-							console.log(`[Task.ts recursivelyMakeClineRequests] anthropic_tool_use_delta with partial_json: ${partial_json}`)
+							// console.log(`[Task.ts recursivelyMakeClineRequests] anthropic_tool_use_delta with partial_json: ${partial_json}`)
 							
 							if (this.isAnthropicClaudeSonnet4 && this.currentAnthropicToolUseId) {
 								// Accumulate the partial JSON for the current tool use
 								this.anthropicToolUseAccumulator.addToolUseDelta(this.currentAnthropicToolUseId, partial_json)
-								console.log(`[Task.ts] Added delta to tool use: ${this.currentAnthropicToolUseId}`)
+								// console.log(`[Task.ts] Added delta to tool use: ${this.currentAnthropicToolUseId}`)
 							} else if (this.isAnthropicClaudeSonnet4) {
 								console.warn("Received anthropic_tool_use_delta but no current tool use ID is set")
 							}
@@ -1615,7 +1615,7 @@ export class Task extends EventEmitter<ClineEvents> {
 			// able to save the assistant's response.
 			let didEndLoop = false
 
-			if (assistantMessage.length > 0) {
+			if (assistantMessage.length > 0 || (this.isAnthropicClaudeSonnet4 && this.anthropicToolUseChunks.length > 0)) {
 				let assistantContent: Anthropic.Messages.ContentBlockParam[] = []
 				
 				if (this.isAnthropicClaudeSonnet4) {
@@ -1633,6 +1633,12 @@ export class Task extends EventEmitter<ClineEvents> {
 							name: toolUse.name,
 							input: toolUse.input
 						})
+					}
+					
+					// Ensure we have at least some content to avoid empty assistant messages
+					if (assistantContent.length === 0) {
+						// Add a minimal text content to prevent API errors
+						assistantContent.push({ type: "text", text: " " })
 					}
 				} else {
 					// For other models, use text format

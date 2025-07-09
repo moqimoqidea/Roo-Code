@@ -8,6 +8,7 @@ import { AnthropicToolUse } from "./parseAssistantMessage"
 import { convertAnthropicToolUseToXml, convertXmlResultToAnthropicToolResponse } from "./anthropic-native"
 import { parseAssistantMessage } from "./parseAssistantMessage"
 import { presentAssistantMessage } from "./presentAssistantMessage"
+import { checkpointSave } from "../checkpoints"
 
 /**
  * Processes and presents Anthropic native tool use messages for Claude Sonnet 4.
@@ -212,6 +213,8 @@ export async function presentAnthropicAssistantMessage(cline: Task) {
 							)
 							cline.userMessageContent.push(anthropicErrorResponse as any)
 							cline.didAlreadyUseTool = true
+							// Restore original block on error
+							cline.assistantMessageContent[cline.currentStreamingContentIndex] = originalBlock
 							return
 						}
 						
@@ -261,9 +264,15 @@ export async function presentAnthropicAssistantMessage(cline: Task) {
 									return await askApproval("tool", toolMessage)
 								}
 								const toolDescription = () => `[${toolUseBlock.name}]`
-								await attemptCompletionTool(cline, toolUseBlock, askApproval, handleError, (content) => {
+								
+								// Override pushToolResult for attempt_completion to handle its special behavior
+								let completionPushToolResult = (content: any) => {
 									toolResults = pushToolResult(content)
-								}, removeClosingTag, toolDescription, askFinishSubTaskApproval)
+									// Mark as already used to prevent further tool execution
+									cline.didAlreadyUseTool = true
+								}
+								
+								await attemptCompletionTool(cline, toolUseBlock, askApproval, handleError, completionPushToolResult, removeClosingTag, toolDescription, askFinishSubTaskApproval)
 								break
 							case "ask_followup_question":
 								await askFollowupQuestionTool(cline, toolUseBlock, askApproval, handleError, (content) => {
@@ -287,6 +296,12 @@ export async function presentAnthropicAssistantMessage(cline: Task) {
 								}
 								resultText += result.text + "\n"
 							}
+						}
+						
+						// Special handling for attempt_completion tool empty results
+						if (toolUseBlock.name === "attempt_completion" && resultText.trim() === "") {
+							// For attempt_completion, empty result means task completed successfully
+							resultText = "Task completed successfully."
 						}
 						
 						// Convert to Anthropic tool response format
@@ -354,6 +369,12 @@ export async function presentAnthropicAssistantMessage(cline: Task) {
 			await presentAssistantMessage(cline)
 			return
 		}
+	}
+
+	// Save checkpoint for recently modified files (same as presentAssistantMessage)
+	const recentlyModifiedFiles = cline.fileContextTracker.getAndClearCheckpointPossibleFile()
+	if (recentlyModifiedFiles.length > 0) {
+		await checkpointSave(cline)
 	}
 
 	// Continue with the rest of the presentation logic

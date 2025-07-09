@@ -104,44 +104,189 @@ export async function presentAnthropicAssistantMessage(cline: Task) {
 					const originalUserMessageContent = [...cline.userMessageContent]
 					
 					try {
-						// Execute the tool directly instead of calling presentAssistantMessage
-						// Create a new instance to avoid locking issues
-						const tempCline = Object.create(cline)
-						tempCline.presentAssistantMessageLocked = false
-						tempCline.currentStreamingContentIndex = 0
-						tempCline.assistantMessageContent = [toolUseBlock]
-						tempCline.userMessageContent = []
-						tempCline.didRejectTool = false
-						tempCline.didAlreadyUseTool = false
+						// Execute the tool directly on the original cline object
+						// Import necessary functions from presentAssistantMessage
+						const { formatResponse } = await import("../prompts/responses")
+						const { validateToolUse } = await import("../tools/validateToolUse")
+						const { defaultModeSlug } = await import("../../shared/modes")
 						
-						// Import the presentAssistantMessage function and execute
-						const { presentAssistantMessage } = await import("./presentAssistantMessage")
-						await presentAssistantMessage(tempCline)
+						// Import tool functions
+						const { readFileTool } = await import("../tools/readFileTool")
+						const { writeToFileTool } = await import("../tools/writeToFileTool")
+						const { listFilesTool } = await import("../tools/listFilesTool")
+						const { searchFilesTool } = await import("../tools/searchFilesTool")
+						const { executeCommandTool } = await import("../tools/executeCommandTool")
+						const { searchAndReplaceTool } = await import("../tools/searchAndReplaceTool")
+						const { insertContentTool } = await import("../tools/insertContentTool")
+						const { attemptCompletionTool } = await import("../tools/attemptCompletionTool")
 						
-						// After tool execution, convert result back to Anthropic format
-						const toolResultContent = tempCline.userMessageContent
+						// Create pushToolResult function
+						const pushToolResult = (content: any) => {
+							const toolResults: any[] = []
+							
+							if (typeof content === "string") {
+								toolResults.push({ type: "text", text: content || "(tool did not return anything)" })
+							} else {
+								toolResults.push(...content)
+							}
+							
+							return toolResults
+						}
 						
-						// Find the tool result text
+						// Create askApproval function
+						const askApproval = async (
+							type: any,
+							partialMessage?: string,
+							progressStatus?: any,
+							isProtected?: boolean,
+						) => {
+							const { response, text, images } = await cline.ask(
+								type,
+								partialMessage,
+								false,
+								progressStatus,
+								isProtected || false,
+							)
+							
+							if (response !== "yesButtonClicked") {
+								if (text) {
+									await cline.say("user_feedback", text, images)
+								}
+								cline.didRejectTool = true
+								return false
+							}
+							
+							if (text) {
+								await cline.say("user_feedback", text, images)
+							}
+							
+							return true
+						}
+						
+						// Create handleError function
+						const handleError = async (action: string, error: Error) => {
+							await cline.say(
+								"error",
+								`Error ${action}:\n${error.message}`,
+							)
+							return formatResponse.toolError(`Error ${action}: ${error.message}`)
+						}
+						
+						// Create removeClosingTag function
+						const removeClosingTag = (tag: string, text?: string): string => {
+							return text || ""
+						}
+						
+						// Close browser if not browser_action
+						if (toolUseBlock.name !== "browser_action") {
+							await cline.browserSession.closeBrowser()
+						}
+						
+						// Record tool usage
+						if (!toolUseBlock.partial) {
+							cline.recordToolUsage(toolUseBlock.name)
+						}
+						
+						// Validate tool use
+						const { mode, customModes } = (await cline.providerRef.deref()?.getState()) ?? {}
+						
+						try {
+							validateToolUse(
+								toolUseBlock.name as any,
+								mode ?? defaultModeSlug,
+								customModes ?? [],
+								{ apply_diff: cline.diffEnabled },
+								toolUseBlock.params,
+							)
+						} catch (error) {
+							cline.consecutiveMistakeCount++
+							const errorResult = formatResponse.toolError(error.message)
+							const anthropicErrorResponse = convertXmlResultToAnthropicToolResponse(
+								originalAnthropicToolUse.id,
+								typeof errorResult === "string" ? errorResult : JSON.stringify(errorResult),
+								true
+							)
+							cline.userMessageContent.push(anthropicErrorResponse as any)
+							return
+						}
+						
+						// Execute the specific tool
+						let toolResults: any[] = []
+						
+						switch (toolUseBlock.name) {
+							case "read_file":
+								await readFileTool(cline, toolUseBlock, askApproval, handleError, (content) => {
+									toolResults = pushToolResult(content)
+								}, removeClosingTag)
+								break
+							case "write_to_file":
+								await writeToFileTool(cline, toolUseBlock, askApproval, handleError, (content) => {
+									toolResults = pushToolResult(content)
+								}, removeClosingTag)
+								break
+							case "list_files":
+								await listFilesTool(cline, toolUseBlock, askApproval, handleError, (content) => {
+									toolResults = pushToolResult(content)
+								}, removeClosingTag)
+								break
+							case "search_files":
+								await searchFilesTool(cline, toolUseBlock, askApproval, handleError, (content) => {
+									toolResults = pushToolResult(content)
+								}, removeClosingTag)
+								break
+							case "execute_command":
+								await executeCommandTool(cline, toolUseBlock, askApproval, handleError, (content) => {
+									toolResults = pushToolResult(content)
+								}, removeClosingTag)
+								break
+							case "search_and_replace":
+								await searchAndReplaceTool(cline, toolUseBlock, askApproval, handleError, (content) => {
+									toolResults = pushToolResult(content)
+								}, removeClosingTag)
+								break
+							case "insert_content":
+								await insertContentTool(cline, toolUseBlock, askApproval, handleError, (content) => {
+									toolResults = pushToolResult(content)
+								}, removeClosingTag)
+								break
+							case "attempt_completion":
+								// attempt_completion needs special handling for askFinishSubTaskApproval
+								const askFinishSubTaskApproval = async () => {
+									const toolMessage = JSON.stringify({ tool: "finishTask" })
+									return await askApproval("tool", toolMessage)
+								}
+								const toolDescription = () => `[${toolUseBlock.name}]`
+								await attemptCompletionTool(cline, toolUseBlock, askApproval, handleError, (content) => {
+									toolResults = pushToolResult(content)
+								}, removeClosingTag, toolDescription, askFinishSubTaskApproval)
+								break
+							default:
+								const errorMsg = `Tool ${toolUseBlock.name} not implemented in Anthropic native mode`
+								toolResults = pushToolResult(formatResponse.toolError(errorMsg))
+								break
+						}
+						
+						// Convert tool results to Anthropic format
 						let resultText = ""
 						let isError = false
 						
-						for (const content of toolResultContent) {
-							if (content.type === "text") {
-								if (content.text.includes("Error")) {
+						for (const result of toolResults) {
+							if (result.type === "text") {
+								if (result.text.includes("Error")) {
 									isError = true
 								}
-								resultText += content.text + "\n"
+								resultText += result.text + "\n"
 							}
 						}
 						
-						// Convert to Anthropic tool response format and store in user content
+						// Convert to Anthropic tool response format
 						const anthropicToolResponse = convertXmlResultToAnthropicToolResponse(
 							originalAnthropicToolUse.id,
 							resultText.trim(),
 							isError
 						)
 						
-						// Add to original cline's user content
+						// Add to user content
 						cline.userMessageContent.push(anthropicToolResponse as any)
 						
 					} catch (toolError) {

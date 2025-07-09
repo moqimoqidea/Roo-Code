@@ -121,6 +121,14 @@ export async function presentAnthropicAssistantMessage(cline: Task) {
 						const { insertContentTool } = await import("../tools/insertContentTool")
 						const { attemptCompletionTool } = await import("../tools/attemptCompletionTool")
 						const { askFollowupQuestionTool } = await import("../tools/askFollowupQuestionTool")
+						const { fetchInstructionsTool } = await import("../tools/fetchInstructionsTool")
+						const { listCodeDefinitionNamesTool } = await import("../tools/listCodeDefinitionNamesTool")
+						const { applyDiffTool } = await import("../tools/applyDiffTool")
+						const { browserActionTool } = await import("../tools/browserActionTool")
+						const { useMcpTool } = await import("../tools/useMcpTool")
+						const { accessMcpResourceTool } = await import("../tools/accessMcpResourceTool")
+						const { switchModeTool } = await import("../tools/switchModeTool")
+						const { newTaskTool } = await import("../tools/newTaskTool")
 						
 						// Create pushToolResult function
 						const pushToolResult = (content: any) => {
@@ -276,6 +284,46 @@ export async function presentAnthropicAssistantMessage(cline: Task) {
 								break
 							case "ask_followup_question":
 								await askFollowupQuestionTool(cline, toolUseBlock, askApproval, handleError, (content) => {
+									toolResults = pushToolResult(content)
+								}, removeClosingTag)
+								break
+							case "fetch_instructions":
+								await fetchInstructionsTool(cline, toolUseBlock, askApproval, handleError, (content) => {
+									toolResults = pushToolResult(content)
+								}, removeClosingTag)
+								break
+							case "list_code_definition_names":
+								await listCodeDefinitionNamesTool(cline, toolUseBlock, askApproval, handleError, (content) => {
+									toolResults = pushToolResult(content)
+								}, removeClosingTag)
+								break
+							case "apply_diff":
+								await applyDiffTool(cline, toolUseBlock, askApproval, handleError, (content) => {
+									toolResults = pushToolResult(content)
+								}, removeClosingTag)
+								break
+							case "browser_action":
+								await browserActionTool(cline, toolUseBlock, askApproval, handleError, (content) => {
+									toolResults = pushToolResult(content)
+								}, removeClosingTag)
+								break
+							case "use_mcp_tool":
+								await useMcpTool(cline, toolUseBlock, askApproval, handleError, (content) => {
+									toolResults = pushToolResult(content)
+								}, removeClosingTag)
+								break
+							case "access_mcp_resource":
+								await accessMcpResourceTool(cline, toolUseBlock, askApproval, handleError, (content) => {
+									toolResults = pushToolResult(content)
+								}, removeClosingTag)
+								break
+							case "switch_mode":
+								await switchModeTool(cline, toolUseBlock, askApproval, handleError, (content) => {
+									toolResults = pushToolResult(content)
+								}, removeClosingTag)
+								break
+							case "new_task":
+								await newTaskTool(cline, toolUseBlock, askApproval, handleError, (content) => {
 									toolResults = pushToolResult(content)
 								}, removeClosingTag)
 								break

@@ -210,6 +210,7 @@ export class Task extends EventEmitter<ClineEvents> {
 	anthropicToolUseAccumulator: AnthropicToolUseAccumulator = new AnthropicToolUseAccumulator()
 	anthropicAssistantMessage = ""
 	anthropicToolUseChunks: AnthropicToolUseChunk[] = []
+	currentAnthropicToolUseId: string | null = null
 
 	constructor({
 		provider,
@@ -1347,6 +1348,7 @@ export class Task extends EventEmitter<ClineEvents> {
 				this.anthropicToolUseAccumulator.clear()
 				this.anthropicAssistantMessage = ""
 				this.anthropicToolUseChunks = []
+				this.currentAnthropicToolUseId = null
 			}
 
 			await this.diffViewProvider.reset()
@@ -1421,33 +1423,14 @@ export class Task extends EventEmitter<ClineEvents> {
 							console.log(`[Task.ts recursivelyMakeClineRequests] anthropic_tool_use with id: ${id}, name: ${name}, input: ${JSON.stringify(input)}`)
 							
 							if (this.isAnthropicClaudeSonnet4) {
-								// Add tool use to accumulator
+								// Store the current tool use ID for delta association
+								this.currentAnthropicToolUseId = id
+								
+								// Initialize tool use in accumulator - don't complete it yet
+								// The input might be empty initially and will be built up via deltas
 								this.anthropicToolUseAccumulator.addToolUseStart(id, name, input)
 								
-								// Create completed tool use chunk
-								const completedToolUse = this.anthropicToolUseAccumulator.completeToolUse(id)
-								if (completedToolUse) {
-									this.anthropicToolUseChunks.push(completedToolUse)
-									
-									// Update assistant message content
-									try {
-										this.assistantMessageContent = parseAnthropicAssistantMessage(
-											this.anthropicAssistantMessage,
-											this.anthropicToolUseChunks
-										)
-										
-										// Present the tool use
-										presentAnthropicAssistantMessage(this)
-									} catch (error) {
-										console.error("Error parsing or presenting Anthropic tool use:", error)
-										// Fallback to text content to prevent complete failure
-										this.assistantMessageContent = [{
-											type: "text",
-											content: `Error processing tool use: ${error.message}`,
-											partial: false
-										}]
-									}
-								}
+								console.log(`[Task.ts] Started accumulating tool use: ${id}`)
 							} else {
 								// For non-Sonnet4 models, this shouldn't happen with XML format
 								console.warn("Received anthropic_tool_use for non-Sonnet4 model - this may indicate a configuration issue")
@@ -1460,11 +1443,12 @@ export class Task extends EventEmitter<ClineEvents> {
 							
 							console.log(`[Task.ts recursivelyMakeClineRequests] anthropic_tool_use_delta with partial_json: ${partial_json}`)
 							
-							if (this.isAnthropicClaudeSonnet4) {
-								// This would typically be handled if we have a current tool use ID
-								// For now, we'll accumulate the partial JSON
-								// In a real implementation, we'd need to track which tool use this delta belongs to
-								console.log("Received tool use delta, but no current tool use ID to associate it with")
+							if (this.isAnthropicClaudeSonnet4 && this.currentAnthropicToolUseId) {
+								// Accumulate the partial JSON for the current tool use
+								this.anthropicToolUseAccumulator.addToolUseDelta(this.currentAnthropicToolUseId, partial_json)
+								console.log(`[Task.ts] Added delta to tool use: ${this.currentAnthropicToolUseId}`)
+							} else if (this.isAnthropicClaudeSonnet4) {
+								console.warn("Received anthropic_tool_use_delta but no current tool use ID is set")
 							}
 							
 							break
@@ -1556,6 +1540,36 @@ export class Task extends EventEmitter<ClineEvents> {
 			}
 
 			this.didCompleteReadingStream = true
+
+			// Complete any pending tool uses for Claude Sonnet 4
+			if (this.isAnthropicClaudeSonnet4 && this.currentAnthropicToolUseId) {
+				console.log(`[Task.ts] Completing tool use after stream ended: ${this.currentAnthropicToolUseId}`)
+				
+				// Try to complete the current tool use
+				const completedToolUse = this.anthropicToolUseAccumulator.completeToolUse(this.currentAnthropicToolUseId)
+				if (completedToolUse) {
+					console.log(`[Task.ts] Successfully completed tool use: ${completedToolUse.id} with input: ${JSON.stringify(completedToolUse.input)}`)
+					
+					// Add to completed tool use chunks
+					this.anthropicToolUseChunks.push(completedToolUse)
+					
+					// Update assistant message content with the completed tool use
+					try {
+						this.assistantMessageContent = parseAnthropicAssistantMessage(
+							this.anthropicAssistantMessage,
+							this.anthropicToolUseChunks
+						)
+					} catch (error) {
+						console.error("Error parsing Anthropic assistant message with completed tool use:", error)
+						// Don't let parsing errors break the flow completely
+					}
+				} else {
+					console.warn(`[Task.ts] Failed to complete tool use: ${this.currentAnthropicToolUseId}`)
+				}
+				
+				// Clear the current tool use ID
+				this.currentAnthropicToolUseId = null
+			}
 
 			// Set any blocks to be complete to allow `presentAssistantMessage`
 			// to finish and set `userMessageContentReady` to true.

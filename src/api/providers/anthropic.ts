@@ -18,6 +18,7 @@ import { getModelParams } from "../transform/model-params"
 import { BaseProvider } from "./base-provider"
 import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from "../index"
 import { calculateApiCostAnthropic } from "../../shared/cost"
+import { EXTEND_ANTHROPIC_TOOLS } from "../../shared/extend-anthropic-tools"
 
 export class AnthropicHandler extends BaseProvider implements SingleCompletionHandler {
 	private options: ApiHandlerOptions
@@ -79,6 +80,8 @@ export class AnthropicHandler extends BaseProvider implements SingleCompletionHa
 						thinking,
 						// Setting cache breakpoint for system prompt so new tasks can reuse it.
 						system: [{ text: systemPrompt, type: "text", cache_control: cacheControl }],
+						// fixme: fix types for anthropic sdk later
+						tools: EXTEND_ANTHROPIC_TOOLS as any,
 						messages: messages.map((message, index) => {
 							if (index === lastUserMsgIndex || index === secondLastMsgUserIndex) {
 								return {
@@ -197,6 +200,21 @@ export class AnthropicHandler extends BaseProvider implements SingleCompletionHa
 
 							yield { type: "text", text: chunk.content_block.text }
 							break
+						case "tool_use":
+							// Handle anthropic native tool use start
+							const id = chunk.content_block.id
+							const name = chunk.content_block.name
+							const input = chunk.content_block.input
+
+							console.log(`[anthropic createMessage] with id: ${id}, name: ${name}, input: ${JSON.stringify(input)}`)
+
+							yield {
+								type: "anthropic_tool_use",
+								id: id,
+								name: name,
+								input: input
+							}
+							break
 					}
 					break
 				case "content_block_delta":
@@ -206,6 +224,13 @@ export class AnthropicHandler extends BaseProvider implements SingleCompletionHa
 							break
 						case "text_delta":
 							yield { type: "text", text: chunk.delta.text }
+							break
+						case "input_json_delta":
+							// Handle anthropic native tool use input delta
+							yield {
+								type: "anthropic_tool_use_delta",
+								partial_json: chunk.delta.partial_json
+							}
 							break
 					}
 

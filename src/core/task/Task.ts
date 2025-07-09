@@ -66,7 +66,9 @@ import { ToolRepetitionDetector } from "../tools/ToolRepetitionDetector"
 import { FileContextTracker } from "../context-tracking/FileContextTracker"
 import { RooIgnoreController } from "../ignore/RooIgnoreController"
 import { RooProtectedController } from "../protect/RooProtectedController"
-import { type AssistantMessageContent, parseAssistantMessage, presentAssistantMessage } from "../assistant-message"
+import { type AssistantMessageContent, parseAssistantMessage, presentAssistantMessage, 
+	parseAnthropicAssistantMessage, presentAnthropicAssistantMessage, AnthropicToolUseAccumulator,
+	type AnthropicToolUseChunk, type AnthropicToolUseDelta } from "../assistant-message"
 import { truncateConversationIfNeeded } from "../sliding-window"
 import { ClineProvider } from "../webview/ClineProvider"
 import { MultiSearchReplaceDiffStrategy } from "../diff/strategies/multi-search-replace"
@@ -85,6 +87,7 @@ import { processUserContentMentions } from "../mentions/processUserContentMentio
 import { ApiMessage } from "../task-persistence/apiMessages"
 import { getMessagesSinceLastSummary, summarizeConversation } from "../condense"
 import { maybeRemoveImageBlocks } from "../../api/transform/image-cleaning"
+import { getClaudeSonnet4SystemPrompt } from "../prompts/sections/claude-sonnet-4-system-prompt"
 
 export type ClineEvents = {
 	message: [{ action: "created" | "updated"; message: ClineMessage }]
@@ -139,6 +142,7 @@ export class Task extends EventEmitter<ClineEvents> {
 
 	// API
 	readonly apiConfiguration: ProviderSettings
+	readonly isAnthropicClaudeSonnet4: boolean
 	api: ApiHandler
 	private static lastGlobalApiRequestTime?: number
 	private consecutiveAutoApprovedRequestsCount: number = 0
@@ -202,6 +206,12 @@ export class Task extends EventEmitter<ClineEvents> {
 	didAlreadyUseTool = false
 	didCompleteReadingStream = false
 
+	// Claude Sonnet 4 specific streaming state
+	anthropicToolUseAccumulator: AnthropicToolUseAccumulator = new AnthropicToolUseAccumulator()
+	anthropicAssistantMessage = ""
+	anthropicToolUseChunks: AnthropicToolUseChunk[] = []
+	currentAnthropicToolUseId: string | null = null
+
 	constructor({
 		provider,
 		apiConfiguration,
@@ -241,6 +251,9 @@ export class Task extends EventEmitter<ClineEvents> {
 		})
 
 		this.apiConfiguration = apiConfiguration
+		this.isAnthropicClaudeSonnet4 = apiConfiguration?.apiProvider === "anthropic" && apiConfiguration?.apiModelId === "claude-sonnet-4-20250514"
+		console.log(`[Task.ts Task Constructor], isAnthropicClaudeSonnet4: ${this.isAnthropicClaudeSonnet4}`)
+		
 		this.api = buildApiHandler(apiConfiguration)
 
 		this.urlContentFetcher = new UrlContentFetcher(provider.context)
@@ -1330,6 +1343,14 @@ export class Task extends EventEmitter<ClineEvents> {
 			this.presentAssistantMessageLocked = false
 			this.presentAssistantMessageHasPendingUpdates = false
 
+			// Reset Claude Sonnet 4 specific state
+			if (this.isAnthropicClaudeSonnet4) {
+				this.anthropicToolUseAccumulator.clear()
+				this.anthropicAssistantMessage = ""
+				this.anthropicToolUseChunks = []
+				this.currentAnthropicToolUseId = null
+			}
+
 			await this.diffViewProvider.reset()
 
 			// Yields only if the first chunk is successful, otherwise will
@@ -1365,7 +1386,20 @@ export class Task extends EventEmitter<ClineEvents> {
 
 							// Parse raw assistant message into content blocks.
 							const prevLength = this.assistantMessageContent.length
-							this.assistantMessageContent = parseAssistantMessage(assistantMessage)
+							
+							if (this.isAnthropicClaudeSonnet4) {
+								// For Claude Sonnet 4, accumulate text message separately
+								this.anthropicAssistantMessage += chunk.text
+								
+								// Parse using Anthropic native parser
+								this.assistantMessageContent = parseAnthropicAssistantMessage(
+									this.anthropicAssistantMessage,
+									this.anthropicToolUseChunks
+								)
+							} else {
+								// Use existing XML parser for other models
+								this.assistantMessageContent = parseAssistantMessage(assistantMessage)
+							}
 
 							if (this.assistantMessageContent.length > prevLength) {
 								// New content we need to present, reset to
@@ -1374,7 +1408,49 @@ export class Task extends EventEmitter<ClineEvents> {
 							}
 
 							// Present content to user.
-							presentAssistantMessage(this)
+							if (this.isAnthropicClaudeSonnet4) {
+								presentAnthropicAssistantMessage(this)
+							} else {
+								presentAssistantMessage(this)
+							}
+							break
+						}
+						case "anthropic_tool_use": {
+							const id = chunk.id
+							const name = chunk.name
+							const input = chunk.input
+							
+							console.log(`[Task.ts recursivelyMakeClineRequests] anthropic_tool_use with id: ${id}, name: ${name}, input: ${JSON.stringify(input)}`)
+							
+							if (this.isAnthropicClaudeSonnet4) {
+								// Store the current tool use ID for delta association
+								this.currentAnthropicToolUseId = id
+								
+								// Initialize tool use in accumulator - don't complete it yet
+								// The input might be empty initially and will be built up via deltas
+								this.anthropicToolUseAccumulator.addToolUseStart(id, name, input)
+								
+								console.log(`[Task.ts] Started accumulating tool use: ${id}`)
+							} else {
+								// For non-Sonnet4 models, this shouldn't happen with XML format
+								console.warn("Received anthropic_tool_use for non-Sonnet4 model - this may indicate a configuration issue")
+							}
+							
+							break
+						}
+						case "anthropic_tool_use_delta": {
+							const partial_json = chunk.partial_json
+							
+							// console.log(`[Task.ts recursivelyMakeClineRequests] anthropic_tool_use_delta with partial_json: ${partial_json}`)
+							
+							if (this.isAnthropicClaudeSonnet4 && this.currentAnthropicToolUseId) {
+								// Accumulate the partial JSON for the current tool use
+								this.anthropicToolUseAccumulator.addToolUseDelta(this.currentAnthropicToolUseId, partial_json)
+								// console.log(`[Task.ts] Added delta to tool use: ${this.currentAnthropicToolUseId}`)
+							} else if (this.isAnthropicClaudeSonnet4) {
+								console.warn("Received anthropic_tool_use_delta but no current tool use ID is set")
+							}
+							
 							break
 						}
 					}
@@ -1465,6 +1541,44 @@ export class Task extends EventEmitter<ClineEvents> {
 
 			this.didCompleteReadingStream = true
 
+			// Complete any pending tool uses for Claude Sonnet 4
+			if (this.isAnthropicClaudeSonnet4 && this.currentAnthropicToolUseId) {
+				console.log(`[Task.ts] Completing tool use after stream ended: ${this.currentAnthropicToolUseId}`)
+				
+				// Try to complete the current tool use
+				const completedToolUse = this.anthropicToolUseAccumulator.completeToolUse(this.currentAnthropicToolUseId)
+				if (completedToolUse) {
+					console.log(`[Task.ts] Successfully completed tool use: ${completedToolUse.id} with input: ${JSON.stringify(completedToolUse.input)}`)
+					
+					// Add to completed tool use chunks
+					this.anthropicToolUseChunks.push(completedToolUse)
+					
+					// Update assistant message content with the completed tool use
+					try {
+						this.assistantMessageContent = parseAnthropicAssistantMessage(
+							this.anthropicAssistantMessage,
+							this.anthropicToolUseChunks
+						)
+						
+						// Force presentation of the newly added tool use blocks
+						// Reset the streaming index to ensure the tool use block gets processed
+						this.currentStreamingContentIndex = 0
+						this.userMessageContentReady = false
+						
+						// Present the assistant message to handle tool execution
+						presentAnthropicAssistantMessage(this)
+					} catch (error) {
+						console.error("Error parsing Anthropic assistant message with completed tool use:", error)
+						// Don't let parsing errors break the flow completely
+					}
+				} else {
+					console.warn(`[Task.ts] Failed to complete tool use: ${this.currentAnthropicToolUseId}`)
+				}
+				
+				// Clear the current tool use ID
+				this.currentAnthropicToolUseId = null
+			}
+
 			// Set any blocks to be complete to allow `presentAssistantMessage`
 			// to finish and set `userMessageContentReady` to true.
 			// (Could be a text block that had no subsequent tool uses, or a
@@ -1484,7 +1598,11 @@ export class Task extends EventEmitter<ClineEvents> {
 				// `pWaitFor` before making the next request. All this is really
 				// doing is presenting the last partial message that we just set
 				// to complete.
-				presentAssistantMessage(this)
+				if (this.isAnthropicClaudeSonnet4) {
+					presentAnthropicAssistantMessage(this)
+				} else {
+					presentAssistantMessage(this)
+				}
 			}
 
 			updateApiReqMsg()
@@ -1497,10 +1615,39 @@ export class Task extends EventEmitter<ClineEvents> {
 			// able to save the assistant's response.
 			let didEndLoop = false
 
-			if (assistantMessage.length > 0) {
+			if (assistantMessage.length > 0 || (this.isAnthropicClaudeSonnet4 && this.anthropicToolUseChunks.length > 0)) {
+				let assistantContent: Anthropic.Messages.ContentBlockParam[] = []
+				
+				if (this.isAnthropicClaudeSonnet4) {
+					// For Claude Sonnet 4, preserve the original Anthropic format
+					// Add text content if present
+					if (this.anthropicAssistantMessage.trim()) {
+						assistantContent.push({ type: "text", text: this.anthropicAssistantMessage.trim() })
+					}
+					
+					// Add tool use blocks in Anthropic format
+					for (const toolUse of this.anthropicToolUseChunks) {
+						assistantContent.push({
+							type: "tool_use",
+							id: toolUse.id,
+							name: toolUse.name,
+							input: toolUse.input
+						})
+					}
+					
+					// Ensure we have at least some content to avoid empty assistant messages
+					if (assistantContent.length === 0) {
+						// Add a minimal text content to prevent API errors
+						assistantContent.push({ type: "text", text: " " })
+					}
+				} else {
+					// For other models, use text format
+					assistantContent = [{ type: "text", text: assistantMessage }]
+				}
+
 				await this.addToApiConversationHistory({
 					role: "assistant",
-					content: [{ type: "text", text: assistantMessage }],
+					content: assistantContent,
 				})
 
 				TelemetryService.instance.captureConversationMessage(this.taskId, "assistant")
@@ -1525,14 +1672,39 @@ export class Task extends EventEmitter<ClineEvents> {
 
 				// If the model did not tool use, then we need to tell it to
 				// either use a tool or attempt_completion.
-				const didToolUse = this.assistantMessageContent.some((block) => block.type === "tool_use")
+				const didToolUse = this.assistantMessageContent.some((block) => 
+					block.type === "tool_use" || block.type === "anthropic_tool_use"
+				)
 
 				if (!didToolUse) {
 					this.userMessageContent.push({ type: "text", text: formatResponse.noToolsUsed() })
 					this.consecutiveMistakeCount++
 				}
 
-				const recDidEndLoop = await this.recursivelyMakeClineRequests(this.userMessageContent)
+				// Convert userMessageContent to proper format for API conversation history
+				let userContent: Anthropic.Messages.ContentBlockParam[] = []
+				
+				if (this.isAnthropicClaudeSonnet4) {
+					// For Claude Sonnet 4, convert tool results to Anthropic format
+					for (const content of this.userMessageContent) {
+						if (content.type === "text") {
+							userContent.push(content)
+						} else if ((content as any).type === "tool_result") {
+							// Already in Anthropic format from presentAnthropicAssistantMessage
+							userContent.push(content as any)
+						} else if (content.type === "image") {
+							userContent.push(content)
+						} else {
+							// Handle other content types gracefully
+							userContent.push(content as any)
+						}
+					}
+				} else {
+					// For other models, use as-is
+					userContent = this.userMessageContent as Anthropic.Messages.ContentBlockParam[]
+				}
+
+				const recDidEndLoop = await this.recursivelyMakeClineRequests(userContent)
 				didEndLoop = recDidEndLoop
 			} else {
 				// If there's no assistant_responses, that means we got no text
@@ -1562,6 +1734,12 @@ export class Task extends EventEmitter<ClineEvents> {
 	}
 
 	private async getSystemPrompt(): Promise<string> {
+		console.log(`[Task.ts getSystemPrompt] isAnthropicClaudeSonnet4: ${this.isAnthropicClaudeSonnet4}`)
+		
+		if (this.isAnthropicClaudeSonnet4) {
+			return getClaudeSonnet4SystemPrompt(this.cwd)
+		}
+		
 		const { mcpEnabled } = (await this.providerRef.deref()?.getState()) ?? {}
 		let mcpHub: McpHub | undefined
 		if (mcpEnabled ?? true) {
@@ -1646,11 +1824,6 @@ export class Task extends EventEmitter<ClineEvents> {
 			profileThresholds = {},
 		} = state ?? {}
 		
-		const debugApiProvider = apiConfiguration?.apiProvider
-		const debugApiModelId = apiConfiguration?.apiModelId
-
-		console.log(`[Task.ts attemptApiRequest] with apiProvider: ${debugApiProvider}, apiModelId: ${debugApiModelId}`)
-
 		// Get condensing configuration for automatic triggers
 		const customCondensingPrompt = state?.customCondensingPrompt
 		const condensingApiConfigId = state?.condensingApiConfigId

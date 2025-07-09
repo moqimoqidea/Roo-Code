@@ -1559,6 +1559,14 @@ export class Task extends EventEmitter<ClineEvents> {
 							this.anthropicAssistantMessage,
 							this.anthropicToolUseChunks
 						)
+						
+						// Force presentation of the newly added tool use blocks
+						// Reset the streaming index to ensure the tool use block gets processed
+						this.currentStreamingContentIndex = 0
+						this.userMessageContentReady = false
+						
+						// Present the assistant message to handle tool execution
+						presentAnthropicAssistantMessage(this)
 					} catch (error) {
 						console.error("Error parsing Anthropic assistant message with completed tool use:", error)
 						// Don't let parsing errors break the flow completely

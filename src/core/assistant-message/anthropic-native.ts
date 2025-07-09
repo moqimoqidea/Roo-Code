@@ -56,18 +56,49 @@ export function convertAnthropicToolUseToXml(toolUse: AnthropicToolUse): string 
 	try {
 		const { name, input } = toolUse
 		
+		console.log(`[convertAnthropicToolUseToXml] Converting tool: ${name}, input:`, input)
+		
 		let xmlContent = `<${name}>\n`
 		
-		// Convert input parameters to XML tags
-		for (const [key, value] of Object.entries(input)) {
-			if (typeof value === 'string') {
-				xmlContent += `<${key}>\n${value}\n</${key}>\n`
-			} else if (value !== null && value !== undefined) {
-				xmlContent += `<${key}>\n${JSON.stringify(value, null, 2)}\n</${key}>\n`
+		// Handle special case where input has 'args' array
+		if (input.args && Array.isArray(input.args)) {
+			console.log(`[convertAnthropicToolUseToXml] Found args array with ${input.args.length} items`)
+			
+			// Expand array items into individual XML tags
+			for (const arg of input.args) {
+				for (const [key, value] of Object.entries(arg)) {
+					if (typeof value === 'string') {
+						xmlContent += `<${key}>\n${value}\n</${key}>\n`
+					} else if (value !== null && value !== undefined) {
+						xmlContent += `<${key}>\n${JSON.stringify(value, null, 2)}\n</${key}>\n`
+					}
+				}
+			}
+		} else {
+			console.log(`[convertAnthropicToolUseToXml] Processing direct input parameters`)
+			
+			// Handle normal key-value pairs
+			for (const [key, value] of Object.entries(input)) {
+				if (typeof value === 'string') {
+					xmlContent += `<${key}>\n${value}\n</${key}>\n`
+				} else if (Array.isArray(value)) {
+					// Handle arrays by creating multiple tags with same name
+					for (const item of value) {
+						if (typeof item === 'string') {
+							xmlContent += `<${key}>\n${item}\n</${key}>\n`
+						} else {
+							xmlContent += `<${key}>\n${JSON.stringify(item, null, 2)}\n</${key}>\n`
+						}
+					}
+				} else if (value !== null && value !== undefined) {
+					xmlContent += `<${key}>\n${JSON.stringify(value, null, 2)}\n</${key}>\n`
+				}
 			}
 		}
 		
 		xmlContent += `</${name}>`
+		
+		console.log(`[convertAnthropicToolUseToXml] Generated XML:`, xmlContent)
 		
 		return xmlContent
 	} catch (error) {

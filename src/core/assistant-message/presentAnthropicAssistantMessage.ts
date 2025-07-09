@@ -169,7 +169,9 @@ export async function presentAnthropicAssistantMessage(cline: Task) {
 								"error",
 								`Error ${action}:\n${error.message}`,
 							)
-							return formatResponse.toolError(`Error ${action}: ${error.message}`)
+							// Push error result to toolResults array
+							const errorResult = formatResponse.toolError(`Error ${action}: ${error.message}`)
+							toolResults = pushToolResult(errorResult)
 						}
 						
 						// Create removeClosingTag function

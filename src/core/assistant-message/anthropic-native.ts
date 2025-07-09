@@ -129,18 +129,25 @@ export class AnthropicToolUseAccumulator {
 			console.warn(`Tool name sanitized from '${name}' to '${sanitizedName}'`)
 		}
 		
+		// Check if input is empty object (common for Claude Sonnet 4 streaming)
+		const isEmptyInput = Object.keys(input).length === 0
+		
 		this.pendingToolUses.set(id, {
 			id,
 			name: sanitizedName,
-			inputJson: JSON.stringify(input),
+			inputJson: isEmptyInput ? "" : JSON.stringify(input),
 			completed: false,
 		})
+		
+		console.log(`[AnthropicToolUseAccumulator] Started tool use ${id} with ${isEmptyInput ? 'empty' : 'initial'} input`)
 	}
 
 	addToolUseDelta(id: string, partialJson: string): void {
 		const existing = this.pendingToolUses.get(id)
 		if (existing && !existing.completed) {
+			const prevLength = existing.inputJson.length
 			existing.inputJson += partialJson
+			console.log(`[AnthropicToolUseAccumulator] Added delta to ${id}: "${partialJson}" (total length: ${prevLength} → ${existing.inputJson.length})`)
 		}
 	}
 
@@ -149,8 +156,11 @@ export class AnthropicToolUseAccumulator {
 		if (!toolUse) return null
 
 		try {
+			console.log(`[AnthropicToolUseAccumulator] Completing tool use ${id} with JSON: "${toolUse.inputJson}"`)
 			const input = JSON.parse(toolUse.inputJson)
 			toolUse.completed = true
+			
+			console.log(`[AnthropicToolUseAccumulator] Successfully parsed JSON for ${id}:`, input)
 			
 			return {
 				type: "anthropic_tool_use",
@@ -159,7 +169,8 @@ export class AnthropicToolUseAccumulator {
 				input,
 			}
 		} catch (error) {
-			console.error(`Failed to parse tool use input JSON for ${id}:`, error)
+			console.error(`[AnthropicToolUseAccumulator] Failed to parse JSON for ${id}:`, error)
+			console.error(`[AnthropicToolUseAccumulator] Problematic JSON: "${toolUse.inputJson}"`)
 			return null
 		}
 	}

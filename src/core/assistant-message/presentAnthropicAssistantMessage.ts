@@ -104,11 +104,22 @@ export async function presentAnthropicAssistantMessage(cline: Task) {
 					const originalUserMessageContent = [...cline.userMessageContent]
 					
 					try {
-						// Use the existing presentAssistantMessage logic to handle the tool
-						await presentAssistantMessage(cline)
+						// Execute the tool directly instead of calling presentAssistantMessage
+						// Create a new instance to avoid locking issues
+						const tempCline = Object.create(cline)
+						tempCline.presentAssistantMessageLocked = false
+						tempCline.currentStreamingContentIndex = 0
+						tempCline.assistantMessageContent = [toolUseBlock]
+						tempCline.userMessageContent = []
+						tempCline.didRejectTool = false
+						tempCline.didAlreadyUseTool = false
+						
+						// Import the presentAssistantMessage function and execute
+						const { presentAssistantMessage } = await import("./presentAssistantMessage")
+						await presentAssistantMessage(tempCline)
 						
 						// After tool execution, convert result back to Anthropic format
-						const toolResultContent = cline.userMessageContent.slice(originalUserMessageContent.length)
+						const toolResultContent = tempCline.userMessageContent
 						
 						// Find the tool result text
 						let resultText = ""
@@ -130,11 +141,8 @@ export async function presentAnthropicAssistantMessage(cline: Task) {
 							isError
 						)
 						
-						// Replace user message content with Anthropic format
-						cline.userMessageContent = [
-							...originalUserMessageContent,
-							anthropicToolResponse as any
-						]
+						// Add to original cline's user content
+						cline.userMessageContent.push(anthropicToolResponse as any)
 						
 					} catch (toolError) {
 						console.error("Error executing Anthropic tool use:", toolError)
@@ -148,10 +156,7 @@ export async function presentAnthropicAssistantMessage(cline: Task) {
 							true
 						)
 						
-						cline.userMessageContent = [
-							...originalUserMessageContent,
-							errorResponse as any
-						]
+						cline.userMessageContent.push(errorResponse as any)
 					}
 					
 					// Restore original block for display purposes

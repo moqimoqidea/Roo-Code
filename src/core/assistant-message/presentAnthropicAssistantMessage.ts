@@ -119,13 +119,15 @@ export async function presentAnthropicAssistantMessage(cline: Task) {
 						const { searchAndReplaceTool } = await import("../tools/searchAndReplaceTool")
 						const { insertContentTool } = await import("../tools/insertContentTool")
 						const { attemptCompletionTool } = await import("../tools/attemptCompletionTool")
+						const { askFollowupQuestionTool } = await import("../tools/askFollowupQuestionTool")
 						
 						// Create pushToolResult function
 						const pushToolResult = (content: any) => {
 							const toolResults: any[] = []
 							
 							if (typeof content === "string") {
-								toolResults.push({ type: "text", text: content || "(tool did not return anything)" })
+								// Handle empty string as a valid result (used by attempt_completion)
+								toolResults.push({ type: "text", text: content === "" ? "" : (content || "(tool did not return anything)") })
 							} else {
 								toolResults.push(...content)
 							}
@@ -209,6 +211,7 @@ export async function presentAnthropicAssistantMessage(cline: Task) {
 								true
 							)
 							cline.userMessageContent.push(anthropicErrorResponse as any)
+							cline.didAlreadyUseTool = true
 							return
 						}
 						
@@ -262,6 +265,11 @@ export async function presentAnthropicAssistantMessage(cline: Task) {
 									toolResults = pushToolResult(content)
 								}, removeClosingTag, toolDescription, askFinishSubTaskApproval)
 								break
+							case "ask_followup_question":
+								await askFollowupQuestionTool(cline, toolUseBlock, askApproval, handleError, (content) => {
+									toolResults = pushToolResult(content)
+								}, removeClosingTag)
+								break
 							default:
 								const errorMsg = `Tool ${toolUseBlock.name} not implemented in Anthropic native mode`
 								toolResults = pushToolResult(formatResponse.toolError(errorMsg))
@@ -291,6 +299,9 @@ export async function presentAnthropicAssistantMessage(cline: Task) {
 						// Add to user content
 						cline.userMessageContent.push(anthropicToolResponse as any)
 						
+						// Mark that we've used a tool to prevent multiple tool executions
+						cline.didAlreadyUseTool = true
+						
 					} catch (toolError) {
 						console.error("Error executing Anthropic tool use:", toolError)
 						// Restore original block on error
@@ -304,6 +315,7 @@ export async function presentAnthropicAssistantMessage(cline: Task) {
 						)
 						
 						cline.userMessageContent.push(errorResponse as any)
+						cline.didAlreadyUseTool = true
 					}
 					
 					// Restore original block for display purposes
@@ -319,6 +331,7 @@ export async function presentAnthropicAssistantMessage(cline: Task) {
 					)
 					
 					cline.userMessageContent.push(errorResponse as any)
+					cline.didAlreadyUseTool = true
 				}
 			} catch (error) {
 				console.error("Error handling Anthropic tool use:", error)
@@ -331,6 +344,7 @@ export async function presentAnthropicAssistantMessage(cline: Task) {
 				)
 				
 				cline.userMessageContent.push(errorResponse as any)
+				cline.didAlreadyUseTool = true
 			}
 			
 			break

@@ -60,16 +60,6 @@ vi.mock("../../../utils/path", () => ({
 	getWorkspacePath: vi.fn().mockReturnValue("/test/workspace"),
 }))
 
-// Mock TelemetryService
-vi.mock("@roo-code/telemetry", () => ({
-	TelemetryService: {
-		instance: {
-			setProvider: vi.fn(),
-			captureTaskCreated: vi.fn(),
-		},
-	},
-}))
-
 // Mock CloudService
 vi.mock("@roo-code/cloud", () => ({
 	CloudService: {

@@ -74,4 +74,4 @@ The Roo Code Extension was shut down on May 15th.
 
 ## License
 
-[Apache 2.0 © 2025 Roo Code, Inc.](./LICENSE)
+[Apache 2.0 © 2026 Roo Code, Inc.](./LICENSE)
